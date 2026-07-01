@@ -23,17 +23,12 @@ function App() {
          * Aborting is expected when React cleans up the effect.
          * It should therefore not be shown as an application error.
          */
-        if (
-          error instanceof DOMException &&
-          error.name === 'AbortError'
-        ) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
           return
         }
 
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Unknown error'
+          error instanceof Error ? error.message : 'Unknown error'
 
         setErrorMessage(message)
       } finally {
@@ -51,6 +46,10 @@ function App() {
     loadToilets()
 
     return () => {
+      /*
+       * Cancelling prevents an obsolete request from updating state after
+       * this component unmounts or React restarts the effect in development.
+       */
       controller.abort()
     }
   }, [])
@@ -65,7 +64,11 @@ function App() {
       </header>
 
       {loading && (
-        <section className="status-panel" aria-live="polite">
+        <section
+          className="status-panel"
+          aria-live="polite"
+          aria-busy="true"
+        >
           <p>Loading toilets...</p>
         </section>
       )}
@@ -106,6 +109,8 @@ function App() {
               <button
                 className="close-list-button"
                 type="button"
+                aria-expanded="true"
+                aria-controls="toilet-list-panel"
                 onClick={() => setShowList(false)}
               >
                 Close list

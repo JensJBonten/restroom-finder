@@ -8,28 +8,27 @@ import {
 import type { Toilet } from '../types/Toilet'
 
 type ToiletMapProps = {
+  /** Toilets whose coordinates determine the marker positions. */
   toilets: Toilet[]
 }
 
-
 const OSLO_CENTER: LatLngTuple = [59.9139, 10.7522]
 
-/**
- * DivIcon ises a simple WC symbol without depending on Leaflet's defualt marker image files. 
- * A custom SVG can replace this later. 
+/*
+ * This icon lives outside the component so Leaflet does not receive a new
+ * icon object every time React renders the map. A DivIcon also avoids the
+ * extra image-path configuration required by Leaflet's default marker.
  */
-
 const toiletIcon = divIcon({
-    className: 'toilet-marker',
-    html: 
-    `
+  className: 'toilet-marker',
+  html: `
     <span class="toilet-marker__symbol" aria-hidden="true">
       🚽
     </span>
-  `, 
-    iconSize: [42, 42],
-    iconAnchor: [21, 21], 
-    popupAnchor: [0, -21],
+  `,
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+  popupAnchor: [0, -21],
 })
 
 /**
@@ -37,7 +36,6 @@ const toiletIcon = divIcon({
  *
  * @param toilets toilets with latitude and longitude coordinates
  */
-
 export function ToiletMap({ toilets }: ToiletMapProps) {
   return (
     <MapContainer

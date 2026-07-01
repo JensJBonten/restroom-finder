@@ -49,7 +49,6 @@
  * Leaflet requires an explicit height. Without this rule, the map
  * container exists in the DOM but has no visible height.
  */
-
 .toilet-map {
   width: 100%;
   height: calc(100svh - 88px);
@@ -108,6 +107,15 @@
 
 .list-toggle-button:hover {
   background: #30302d;
+}
+
+.list-toggle-button:active,
+.close-list-button:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+.close-list-button:active {
+  transform: scale(0.98);
 }
 
 .list-toggle-button:focus-visible,

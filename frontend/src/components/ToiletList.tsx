@@ -1,13 +1,13 @@
 import type { Toilet } from '../types/Toilet'
 
 type ToiletListProps = {
+  /** Toilets to present when the map is not convenient to use. */
   toilets: Toilet[]
 }
 
 /**
  * Displays the toilets as a compact alternative to the map view.
  */
-
 export function ToiletList({ toilets }: ToiletListProps) {
   if (toilets.length === 0) {
     return <p className="empty-message">No toilets found.</p>

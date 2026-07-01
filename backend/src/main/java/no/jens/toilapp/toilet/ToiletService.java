@@ -1,10 +1,14 @@
 package no.jens.toilapp.toilet;
 
 import org.springframework.stereotype.Service;
+
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
-
+/**
+ * Provides temporary in-memory toilet data until database persistence is added.
+ */
 @Service
 public class ToiletService {
 
@@ -66,12 +70,24 @@ public class ToiletService {
             )
     );
 
+    /**
+     * Returns every toilet currently known by the application.
+     *
+     * @return immutable list of the five sample Oslo toilets
+     */
     public List<Toilet> getAllToilets() {
         return toilets;
     }
 
+    /**
+     * Looks up a toilet by its unique identifier.
+     *
+     * @param id toilet identifier from the API path
+     * @return matching toilet, or {@link Optional#empty()} when no toilet exists
+     */
     public Optional<Toilet> getToiletById(long id) {
-        return toilets.stream().filter(t -> t.getId() == id).findFirst();
+        return toilets.stream()
+                .filter(toilet -> Objects.equals(toilet.getId(), id))
+                .findFirst();
     }
-
 }
