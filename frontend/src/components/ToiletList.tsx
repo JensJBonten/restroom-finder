@@ -1,32 +1,50 @@
-import type { Toilet } from "../types/Toilet";
+import type { Toilet } from '../types/Toilet'
 
 type ToiletListProps = {
-  toilets: Toilet[];
-};
+  toilets: Toilet[]
+}
+
+/**
+ * Displays the toilets as a compact alternative to the map view.
+ */
 
 export function ToiletList({ toilets }: ToiletListProps) {
   if (toilets.length === 0) {
-    return <p>No toilets found.</p>;
+    return <p className="empty-message">No toilets found.</p>
   }
 
   return (
-    <section>
-      <h2>Available toilets</h2>
+    <section
+      className="toilet-list"
+      aria-labelledby="available-toilets-heading"
+    >
+      <h2 id="available-toilets-heading">Available toilets</h2>
 
-      {toilets.map((toilet) => (
-        <article key={toilet.id}>
-          <h3>{toilet.name}</h3>
-          <p>{toilet.address}</p>
-          <p>{toilet.free ? "Free" : "Paid"}</p>
-          <p>{toilet.publicToilet ? "Public" : "Private"}</p>
-          <p>
-            {toilet.requiresEntry
-              ? "Requires entry"
-              : "No entry required"}
-          </p>
-          <p>Cleanliness: {toilet.cleanlinessRating}/5</p>
-        </article>
-      ))}
+      <div className="toilet-list__items">
+        {toilets.map((toilet) => (
+          <article className="toilet-list-item" key={toilet.id}>
+            <h3>{toilet.name}</h3>
+
+            <p>{toilet.address}</p>
+
+            <div className="toilet-list-item__details">
+              <span>{toilet.free ? 'Free' : 'Paid'}</span>
+
+              <span>
+                {toilet.publicToilet
+                  ? 'Public toilet'
+                  : 'Other documented toilet'}
+              </span>
+
+              <span>
+                {toilet.requiresEntry
+                  ? 'Requires entry'
+                  : 'No entry required'}
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
     </section>
-  );
+  )
 }
