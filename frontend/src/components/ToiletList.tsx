@@ -1,16 +1,26 @@
-import type { Toilet } from '../types/Toilet'
+import type { ToiletDisplayItem } from '../types/ToiletDisplayItem'
+import { formatDistance } from '../utils/distance'
 
 type ToiletListProps = {
   /** Toilets to present when the map is not convenient to use. */
-  toilets: Toilet[]
+  toilets: ToiletDisplayItem[]
+
+  /** Message shown when the list has no toilets to display. */
+  emptyMessage?: string
 }
 
 /**
- * Displays the toilets as a compact alternative to the map view.
+ * Displays toilets as a compact alternative to the map view.
+ *
+ * The list receives already-filtered data. It should only present the
+ * toilets; it should not decide which toilets are nearby.
  */
-export function ToiletList({ toilets }: ToiletListProps) {
+export function ToiletList({
+  toilets,
+  emptyMessage = 'No toilets found.',
+}: ToiletListProps) {
   if (toilets.length === 0) {
-    return <p className="empty-message">No toilets found.</p>
+    return <p className="empty-message">{emptyMessage}</p>
   }
 
   return (
@@ -24,6 +34,12 @@ export function ToiletList({ toilets }: ToiletListProps) {
         {toilets.map((toilet) => (
           <article className="toilet-list-item" key={toilet.id}>
             <h3>{toilet.name}</h3>
+
+            {toilet.distanceMeters !== undefined && (
+              <p className="toilet-list-item__distance">
+                {formatDistance(toilet.distanceMeters)} away
+              </p>
+            )}
 
             <p>{toilet.address}</p>
 

@@ -10,6 +10,19 @@ describe('ToiletList', () => {
     expect(screen.getByText('No toilets found.')).toBeInTheDocument()
   })
 
+  it('renders a custom empty message', () => {
+    render(
+      <ToiletList
+        toilets={[]}
+        emptyMessage="No toilets found within 1 km."
+      />,
+    )
+
+    expect(
+      screen.getByText('No toilets found within 1 km.'),
+    ).toBeInTheDocument()
+  })
+
   it('renders each toilet with its basic information', () => {
     render(<ToiletList toilets={toilets} />)
 
@@ -28,5 +41,20 @@ describe('ToiletList', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Free')).toBeInTheDocument()
     expect(screen.getByText('Requires entry')).toBeInTheDocument()
+  })
+
+  it('renders distance when it is available', () => {
+    render(
+      <ToiletList
+        toilets={[
+          {
+            ...toilets[0],
+            distanceMeters: 349.6,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('350 m away')).toBeInTheDocument()
   })
 })

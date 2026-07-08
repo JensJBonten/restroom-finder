@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchToilets } from './api/toiletsApi'
 import { ToiletList } from './components/ToiletList'
 import { ToiletMap } from './components/ToiletMap'
+import { useUserLocation } from './hooks/useUserLocation'
 import type { Toilet } from './types/Toilet'
+import type { ToiletDisplayItem } from './types/ToiletDisplayItem'
+import { findNearbyToilets } from './utils/toiletSearch'
 import './App.css'
 
 function App() {
@@ -10,6 +13,12 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [showList, setShowList] = useState(false)
+
+  const {
+    coordinates: userLocation,
+    status: userLocationStatus,
+    errorMessage: userLocationErrorMessage,
+  } = useUserLocation()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -54,6 +63,41 @@ function App() {
     }
   }, [])
 
+  const displayedToilets: ToiletDisplayItem[] = useMemo(() => {
+    if (!userLocation) {
+      return toilets
+    }
+
+    return findNearbyToilets(toilets, userLocation)
+  }, [toilets, userLocation])
+
+  const showNoNearbyToiletsMessage =
+    userLocation !== null && displayedToilets.length === 0
+
+  const locationStatusMessage = (() => {
+    if (showNoNearbyToiletsMessage) {
+      return 'No toilets found within 2 km.'
+    }
+
+    if (userLocationErrorMessage) {
+      return userLocationErrorMessage
+    }
+
+    if (userLocationStatus === 'loading') {
+      return 'Finding your location...'
+    }
+
+    if (userLocationStatus === 'success') {
+      return 'Showing toilets within 2 km of your location.'
+    }
+
+    return null
+  })()
+
+  const listEmptyMessage = userLocation
+    ? 'No toilets found within 2 km.'
+    : 'No toilets found.'
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -86,7 +130,20 @@ function App() {
           className="map-wrapper"
           aria-label="Map showing nearby toilets"
         >
-          <ToiletMap toilets={toilets} />
+          <ToiletMap
+            toilets={displayedToilets}
+            userLocation={userLocation}
+          />
+
+          {locationStatusMessage && (
+            <div
+              className="location-status-card"
+              role="status"
+              aria-live="polite"
+            >
+              <p>{locationStatusMessage}</p>
+            </div>
+          )}
 
           {!showList && (
             <button
@@ -96,7 +153,7 @@ function App() {
               aria-controls="toilet-list-panel"
               onClick={() => setShowList(true)}
             >
-              Show list ({toilets.length})
+              Show list ({displayedToilets.length})
             </button>
           )}
 
@@ -116,7 +173,10 @@ function App() {
                 Close list
               </button>
 
-              <ToiletList toilets={toilets} />
+              <ToiletList
+                toilets={displayedToilets}
+                emptyMessage={listEmptyMessage}
+              />
             </aside>
           )}
         </section>

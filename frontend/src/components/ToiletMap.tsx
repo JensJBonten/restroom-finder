@@ -1,18 +1,30 @@
+import { useEffect } from 'react'
 import { divIcon, type LatLngTuple } from 'leaflet'
 import {
   MapContainer,
   Marker,
   Popup,
   TileLayer,
+  useMap,
 } from 'react-leaflet'
-import type { Toilet } from '../types/Toilet'
+import type { Coordinates } from '../types/Coordinates'
+import type { ToiletDisplayItem } from '../types/ToiletDisplayItem'
+import { formatDistance } from '../utils/distance'
 
 type ToiletMapProps = {
   /** Toilets whose coordinates determine the marker positions. */
-  toilets: Toilet[]
+  toilets: ToiletDisplayItem[]
+
+  /** User position when the browser has provided it. */
+  userLocation: Coordinates | null
+}
+
+type MapCenterControllerProps = {
+  userLocation: Coordinates | null
 }
 
 const OSLO_CENTER: LatLngTuple = [59.9139, 10.7522]
+const DEFAULT_MAP_ZOOM = 13
 
 /*
  * This icon lives outside the component so Leaflet does not receive a new
@@ -31,23 +43,83 @@ const toiletIcon = divIcon({
   popupAnchor: [0, -21],
 })
 
+const userLocationIcon = divIcon({
+  className: 'user-location-marker',
+  html: `
+    <span class="user-location-marker__symbol" aria-hidden="true">
+      ●
+    </span>
+  `,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  popupAnchor: [0, -14],
+})
+
+function toLatLngTuple(coordinates: Coordinates): LatLngTuple {
+  return [coordinates.latitude, coordinates.longitude]
+}
+
 /**
- * Displays toilets received from the backend as interactive map markers.
+ * Moves the already-created Leaflet map when the user's location arrives.
  *
- * @param toilets toilets with latitude and longitude coordinates
+ * The map uses a slightly zoomed-out view so mobile users can see more
+ * of the surrounding city instead of only the closest streets.
  */
-export function ToiletMap({ toilets }: ToiletMapProps) {
+function MapCenterController({
+  userLocation,
+}: MapCenterControllerProps) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!userLocation) {
+      return
+    }
+
+    map.setView(toLatLngTuple(userLocation), DEFAULT_MAP_ZOOM)
+  }, [map, userLocation])
+
+  return null
+}
+
+/**
+ * Displays nearby toilets and, when available, the user's position.
+ *
+ * @param toilets already-filtered toilets to show as markers
+ * @param userLocation current user coordinates or null fallback
+ */
+export function ToiletMap({
+  toilets,
+  userLocation,
+}: ToiletMapProps) {
+  const initialCenter = userLocation
+    ? toLatLngTuple(userLocation)
+    : OSLO_CENTER
+
   return (
     <MapContainer
-      center={OSLO_CENTER}
-      zoom={14}
+      center={initialCenter}
+      zoom={DEFAULT_MAP_ZOOM}
       scrollWheelZoom
       className="toilet-map"
     >
+      <MapCenterController userLocation={userLocation} />
+
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {userLocation && (
+        <Marker
+          position={toLatLngTuple(userLocation)}
+          icon={userLocationIcon}
+          title="Your location"
+        >
+          <Popup>
+            <p>You are here</p>
+          </Popup>
+        </Marker>
+      )}
 
       {toilets.map((toilet) => (
         <Marker
@@ -59,6 +131,13 @@ export function ToiletMap({ toilets }: ToiletMapProps) {
           <Popup>
             <article className="toilet-popup">
               <h2>{toilet.name}</h2>
+
+              {toilet.distanceMeters !== undefined && (
+                <p className="toilet-popup__distance">
+                  {formatDistance(toilet.distanceMeters)} away
+                </p>
+              )}
+
               <p>{toilet.address}</p>
 
               <p className="toilet-popup__status">

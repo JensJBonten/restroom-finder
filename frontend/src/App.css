@@ -55,7 +55,8 @@
   min-height: 480px;
 }
 
-.toilet-marker {
+.toilet-marker,
+.user-location-marker {
   background: transparent;
   border: 0;
 }
@@ -72,6 +73,19 @@
   box-shadow: 0 3px 10px rgb(0 0 0 / 25%);
 }
 
+.user-location-marker__symbol {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 16px;
+  background: #2563eb;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 30%);
+}
+
 .toilet-popup {
   min-width: 180px;
 }
@@ -85,8 +99,34 @@
   margin: 4px 0;
 }
 
+.toilet-popup__distance {
+  font-weight: 700;
+  color: #2563eb;
+}
+
 .toilet-popup__status {
   font-weight: 700;
+}
+
+.location-status-card {
+  position: absolute;
+  z-index: 1000;
+  top: 16px;
+  left: 50%;
+  width: min(calc(100% - 32px), 420px);
+  padding: 10px 14px;
+  color: #181816;
+  background: rgb(255 255 255 / 94%);
+  border: 1px solid #deded8;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 15%);
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.location-status-card p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .list-toggle-button {
@@ -180,6 +220,11 @@
 .toilet-list-item p {
   margin: 0 0 10px;
   color: #66665f;
+}
+
+.toilet-list-item__distance {
+  font-weight: 700;
+  color: #2563eb;
 }
 
 .toilet-list-item__details {
