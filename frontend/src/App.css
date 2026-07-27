@@ -113,7 +113,7 @@
   z-index: 1000;
   top: 16px;
   left: 50%;
-  width: min(calc(100% - 32px), 420px);
+  width: min(calc(100% - 32px), 440px);
   padding: 10px 14px;
   color: #181816;
   text-align: center;
@@ -129,47 +129,69 @@
   font-size: 0.9rem;
 }
 
-.list-toggle-button {
+.map-action-buttons {
   position: absolute;
   z-index: 1000;
   bottom: 24px;
   left: 50%;
-  min-height: 48px;
-  padding: 0 22px;
-  color: #ffffff;
-  font: inherit;
-  background: #181816;
-  border: 0;
-  border-radius: 999px;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+  display: flex;
+  gap: 10px;
   transform: translateX(-50%);
+}
+
+.map-action-button {
+  min-height: 48px;
+  padding: 0 18px;
+  color: #181816;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #ffffff;
+  border: 1px solid #cfcfc7;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
   cursor: pointer;
 }
 
-.list-toggle-button:hover {
+.map-action-button:hover {
+  background: #f1f1ec;
+}
+
+.map-action-button--primary {
+  color: #ffffff;
+  background: #181816;
+  border-color: #181816;
+}
+
+.map-action-button--primary:hover {
   background: #30302d;
 }
 
-.list-toggle-button:active {
-  transform: translateX(-50%) scale(0.98);
+.map-action-button:active {
+  transform: scale(0.98);
 }
 
-.list-toggle-button:focus-visible,
+.map-action-button:focus-visible,
 .close-list-button:focus-visible,
 .toilet-list-item:focus-visible,
 .toilet-detail-card__close-button:focus-visible,
-.toilet-detail-card__navigation-link:focus-visible {
+.toilet-detail-card__navigation-link:focus-visible,
+.toilet-filter-panel__close-button:focus-visible,
+.toilet-filter-panel__reset-button:focus-visible,
+.toilet-filter-option input:focus-visible,
+.toilet-filter-panel__rating select:focus-visible {
   outline: 3px solid #5d86d7;
   outline-offset: 3px;
 }
 
-.toilet-list-panel {
+.toilet-list-panel,
+.filter-panel {
   position: absolute;
-  z-index: 1000;
+  z-index: 1050;
   right: 0;
   bottom: 0;
   left: 0;
-  max-height: 58%;
+  max-height: 70%;
   padding: 16px;
   overflow-y: auto;
   background: #ffffff;
@@ -291,9 +313,9 @@
   position: absolute;
   z-index: 1100;
   right: 16px;
-  bottom: 88px;
+  bottom: 92px;
   left: 16px;
-  max-height: calc(100% - 120px);
+  max-height: calc(100% - 124px);
   padding: 20px;
   overflow-y: auto;
   color: #181816;
@@ -310,7 +332,8 @@
   justify-content: space-between;
 }
 
-.toilet-detail-card__eyebrow {
+.toilet-detail-card__eyebrow,
+.toilet-filter-panel__eyebrow {
   margin: 0 0 4px;
   color: #66665f;
   font-size: 0.78rem;
@@ -319,13 +342,15 @@
   text-transform: uppercase;
 }
 
-.toilet-detail-card h2 {
+.toilet-detail-card h2,
+.toilet-filter-panel h2 {
   margin: 0;
   font-size: 1.3rem;
   line-height: 1.2;
 }
 
-.toilet-detail-card__close-button {
+.toilet-detail-card__close-button,
+.toilet-filter-panel__close-button {
   flex: 0 0 auto;
   padding: 7px 11px;
   color: #353530;
@@ -336,11 +361,13 @@
   cursor: pointer;
 }
 
-.toilet-detail-card__close-button:hover {
+.toilet-detail-card__close-button:hover,
+.toilet-filter-panel__close-button:hover {
   background: #dfdfd8;
 }
 
-.toilet-detail-card__close-button:active {
+.toilet-detail-card__close-button:active,
+.toilet-filter-panel__close-button:active {
   transform: scale(0.98);
 }
 
@@ -404,6 +431,118 @@
   transform: scale(0.99);
 }
 
+.toilet-filter-panel {
+  width: min(100%, 720px);
+  margin: 0 auto;
+}
+
+.toilet-filter-panel__header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.toilet-filter-panel__group {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.toilet-filter-panel__group legend {
+  margin-bottom: 10px;
+  color: #353530;
+  font-weight: 700;
+}
+
+.toilet-filter-option {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  background: #f7f7f4;
+  border: 1px solid #deded8;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.toilet-filter-option:hover {
+  border-color: #9d9d94;
+}
+
+.toilet-filter-option input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  margin: 1px 0 0;
+  accent-color: #2563eb;
+}
+
+.toilet-filter-option span {
+  display: grid;
+  gap: 3px;
+}
+
+.toilet-filter-option strong {
+  color: #181816;
+}
+
+.toilet-filter-option small {
+  color: #66665f;
+  line-height: 1.35;
+}
+
+.toilet-filter-panel__rating {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.toilet-filter-panel__rating label {
+  color: #353530;
+  font-weight: 700;
+}
+
+.toilet-filter-panel__rating select {
+  min-height: 46px;
+  padding: 0 12px;
+  color: #181816;
+  font: inherit;
+  background: #ffffff;
+  border: 1px solid #bdbdb5;
+  border-radius: 10px;
+}
+
+.toilet-filter-panel__reset-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 18px;
+  color: #181816;
+  font: inherit;
+  font-weight: 700;
+  background: #eeeeea;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.toilet-filter-panel__reset-button:hover:not(:disabled) {
+  background: #dfdfd8;
+}
+
+.toilet-filter-panel__reset-button:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.toilet-filter-panel__reset-button:disabled {
+  color: #8c8c85;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 @media (min-width: 800px) {
   .app-header {
     padding-inline: 40px;
@@ -414,6 +553,15 @@
     bottom: 24px;
     left: auto;
     width: 420px;
+    max-height: calc(100% - 48px);
+    border-radius: 18px;
+  }
+
+  .filter-panel {
+    right: auto;
+    bottom: 24px;
+    left: 24px;
+    width: 380px;
     max-height: calc(100% - 48px);
     border-radius: 18px;
   }

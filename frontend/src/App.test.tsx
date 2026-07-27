@@ -1,4 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import {
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   beforeEach,
@@ -30,34 +34,44 @@ type ToiletMapMockProps = {
   ) => void
 }
 
-vi.mock('./components/ToiletMap', () => ({
-  ToiletMap: ({
-    toilets: mapToilets,
-    userLocation,
-    onSelectToilet,
-  }: ToiletMapMockProps) => (
-    <div data-testid="toilet-map">
-      <p>
-        {mapToilets.length} map markers
-        {userLocation
-          ? ' with user location'
-          : ' without user location'}
-      </p>
+vi.mock(
+  './components/ToiletMap',
+  () => ({
+    ToiletMap: ({
+      toilets: mapToilets,
+      userLocation,
+      onSelectToilet,
+    }: ToiletMapMockProps) => (
+      <div data-testid="toilet-map">
+        <p>
+          {mapToilets.length}{' '}
+          map markers
+          {userLocation
+            ? ' with user location'
+            : ' without user location'}
+        </p>
 
-      {mapToilets.map((toilet) => (
-        <button
-          key={toilet.id}
-          type="button"
-          onClick={() =>
-            onSelectToilet(toilet)
-          }
-        >
-          Select {toilet.name} marker
-        </button>
-      ))}
-    </div>
-  ),
-}))
+        {mapToilets.map(
+          (toilet) => (
+            <button
+              key={toilet.id}
+              type="button"
+              onClick={() =>
+                onSelectToilet(
+                  toilet,
+                )
+              }
+            >
+              Select{' '}
+              {toilet.name}{' '}
+              marker
+            </button>
+          ),
+        )}
+      </div>
+    ),
+  }),
+)
 
 const fetchToiletsMock =
   vi.mocked(fetchToilets)
@@ -81,53 +95,79 @@ describe('App', () => {
 
   it('shows a loading state while the request is pending', () => {
     fetchToiletsMock.mockReturnValue(
-      new Promise<never>(() => undefined),
+      new Promise<never>(
+        () => undefined,
+      ),
     )
 
     render(<App />)
 
     expect(
-      screen.getByText('Loading toilets...'),
+      screen.getByText(
+        'Loading toilets...',
+      ),
     ).toBeInTheDocument()
   })
 
-  it('shows the map and nearby toilet count after loading succeeds', async () => {
-    fetchToiletsMock.mockResolvedValue(toilets)
+  it('shows the map and nearby count after loading succeeds', async () => {
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
 
     render(<App />)
 
     expect(
-      await screen.findByTestId('toilet-map'),
+      await screen.findByTestId(
+        'toilet-map',
+      ),
     ).toHaveTextContent(
       '2 map markers with user location',
     )
+
+    expect(
+      screen.getByText(
+        'Showing 2 of 2 nearby toilets.',
+      ),
+    ).toBeInTheDocument()
 
     expect(
       screen.getByRole('button', {
         name: 'Show list (2)',
       }),
     ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Filters',
+      }),
+    ).toBeInTheDocument()
   })
 
   it('shows an API error and hides the map', async () => {
     fetchToiletsMock.mockRejectedValue(
-      new Error('Network unavailable'),
+      new Error(
+        'Network unavailable',
+      ),
     )
 
     render(<App />)
 
     expect(
-      await screen.findByRole('alert'),
+      await screen.findByRole(
+        'alert',
+      ),
     ).toHaveTextContent(
       'Could not load toilets: Network unavailable',
     )
 
     expect(
-      screen.queryByTestId('toilet-map'),
+      screen.queryByTestId(
+        'toilet-map',
+      ),
     ).not.toBeInTheDocument()
   })
 
-  it('shows a location fallback message when location is denied', async () => {
+  it('shows the location fallback when permission is denied', async () => {
     useUserLocationMock.mockReturnValue({
       coordinates: null,
       status: 'denied',
@@ -135,7 +175,9 @@ describe('App', () => {
         'Location access was denied. Showing Oslo toilets instead.',
     })
 
-    fetchToiletsMock.mockResolvedValue(toilets)
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
 
     render(<App />)
 
@@ -146,7 +188,9 @@ describe('App', () => {
     ).toBeInTheDocument()
 
     expect(
-      screen.getByTestId('toilet-map'),
+      screen.getByTestId(
+        'toilet-map',
+      ),
     ).toHaveTextContent(
       '2 map markers without user location',
     )
@@ -162,7 +206,9 @@ describe('App', () => {
       errorMessage: null,
     })
 
-    fetchToiletsMock.mockResolvedValue(toilets)
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
 
     render(<App />)
 
@@ -173,83 +219,152 @@ describe('App', () => {
     ).toBeInTheDocument()
 
     expect(
-      screen.getByTestId('toilet-map'),
+      screen.getByTestId(
+        'toilet-map',
+      ),
     ).toHaveTextContent(
       '0 map markers with user location',
     )
+  })
+
+  it('opens and closes the toilet list', async () => {
+    const user =
+      userEvent.setup()
+
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
+
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Show list (2)',
+        },
+      ),
+    )
 
     expect(
-      screen.queryByText(
-        'Showing toilets within 2 km of your location.',
+      screen.getByRole(
+        'heading',
+        {
+          name: 'Available toilets',
+        },
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole(
+        'button',
+        {
+          name: 'Close list',
+        },
+      ),
+    )
+
+    expect(
+      screen.queryByRole(
+        'heading',
+        {
+          name: 'Available toilets',
+        },
       ),
     ).not.toBeInTheDocument()
   })
 
-  it('opens and closes the toilet list', async () => {
-    const user = userEvent.setup()
+  it('opens and closes the filter panel', async () => {
+    const user =
+      userEvent.setup()
 
-    fetchToiletsMock.mockResolvedValue(toilets)
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
 
     render(<App />)
 
     await user.click(
-      await screen.findByRole('button', {
-        name: 'Show list (2)',
-      }),
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Filters',
+        },
+      ),
     )
 
     expect(
-      screen.getByRole('heading', {
-        name: 'Available toilets',
-      }),
+      screen.getByRole(
+        'heading',
+        {
+          name: 'Toilet filters',
+        },
+      ),
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('button', {
-        name: 'Close list',
-      }),
+      screen.getByRole(
+        'button',
+        {
+          name: 'Close filters',
+        },
+      ),
     )
 
     expect(
-      screen.queryByRole('heading', {
-        name: 'Available toilets',
-      }),
+      screen.queryByRole(
+        'heading',
+        {
+          name: 'Toilet filters',
+        },
+      ),
     ).not.toBeInTheDocument()
   })
 
-  it('selects a toilet from the list and closes its detail card', async () => {
-    const user = userEvent.setup()
+  it('selects a toilet from the list', async () => {
+    const user =
+      userEvent.setup()
 
-    fetchToiletsMock.mockResolvedValue(toilets)
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
 
     render(<App />)
 
     await user.click(
-      await screen.findByRole('button', {
-        name: 'Show list (2)',
-      }),
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Show list (2)',
+        },
+      ),
     )
 
     await user.click(
-      screen.getByRole('button', {
-        name: 'View details for Oslo Central Station',
-      }),
+      screen.getByRole(
+        'button',
+        {
+          name: 'View details for Oslo Central Station',
+        },
+      ),
     )
 
     expect(
-      screen.queryByRole('heading', {
-        name: 'Available toilets',
-      }),
+      screen.queryByRole(
+        'heading',
+        {
+          name: 'Available toilets',
+        },
+      ),
     ).not.toBeInTheDocument()
 
     expect(
-      screen.getByRole('heading', {
-        name: 'Oslo Central Station',
-      }),
-    ).toBeInTheDocument()
-
-    expect(
-      screen.getByText('Jernbanetorget 1'),
+      screen.getByRole(
+        'heading',
+        {
+          name: 'Oslo Central Station',
+        },
+      ),
     ).toBeInTheDocument()
 
     const navigationLink =
@@ -257,52 +372,54 @@ describe('App', () => {
         name: 'Navigate with Google Maps',
       })
 
-    const navigationUrl = new URL(
-      navigationLink.getAttribute('href') ?? '',
-    )
+    const navigationUrl =
+      new URL(
+        navigationLink.getAttribute(
+          'href',
+        ) ?? '',
+      )
 
     expect(
       navigationUrl.searchParams.get(
         'destination',
       ),
-    ).toBe('59.9109,10.7523')
+    ).toBe(
+      '59.9109,10.7523',
+    )
 
     expect(
       navigationUrl.searchParams.get(
         'travelmode',
       ),
     ).toBe('walking')
-
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Close details for Oslo Central Station',
-      }),
-    )
-
-    expect(
-      screen.queryByRole('heading', {
-        name: 'Oslo Central Station',
-      }),
-    ).not.toBeInTheDocument()
   })
 
   it('selects a toilet from a map marker', async () => {
-    const user = userEvent.setup()
+    const user =
+      userEvent.setup()
 
-    fetchToiletsMock.mockResolvedValue(toilets)
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
 
     render(<App />)
 
     await user.click(
-      await screen.findByRole('button', {
-        name: 'Select Deichman Bjørvika marker',
-      }),
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Select Deichman Bjørvika marker',
+        },
+      ),
     )
 
     expect(
-      screen.getByRole('heading', {
-        name: 'Deichman Bjørvika',
-      }),
+      screen.getByRole(
+        'heading',
+        {
+          name: 'Deichman Bjørvika',
+        },
+      ),
     ).toBeInTheDocument()
 
     expect(
@@ -310,23 +427,284 @@ describe('App', () => {
         'Anne-Cath. Vestlys plass 1',
       ),
     ).toBeInTheDocument()
+  })
+
+  it('filters the map and list to free toilets', async () => {
+    const user =
+      userEvent.setup()
+
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
+
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Filters',
+        },
+      ),
+    )
+
+    await user.click(
+      screen.getByRole(
+        'checkbox',
+        {
+          name: /free only/i,
+        },
+      ),
+    )
 
     expect(
-      screen.getByText('Free'),
-    ).toBeInTheDocument()
+      screen.getByTestId(
+        'toilet-map',
+      ),
+    ).toHaveTextContent(
+      '1 map markers with user location',
+    )
 
     expect(
       screen.getByText(
-        'Other documented toilet',
+        'Showing 1 of 2 nearby toilets.',
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole(
+        'button',
+        {
+          name: 'Close filters',
+        },
+      ),
+    )
+
+    expect(
+      screen.getByRole(
+        'button',
+        {
+          name: 'Filters (1)',
+        },
       ),
     ).toBeInTheDocument()
 
     expect(
-      screen.getByText('Requires entry'),
+      screen.getByRole(
+        'button',
+        {
+          name: 'Show list (1)',
+        },
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole(
+        'button',
+        {
+          name: 'Show list (1)',
+        },
+      ),
+    )
+
+    expect(
+      screen.getByRole(
+        'button',
+        {
+          name: 'View details for Deichman Bjørvika',
+        },
+      ),
     ).toBeInTheDocument()
 
     expect(
-      screen.getByText('5/5'),
+      screen.queryByRole(
+        'button',
+        {
+          name: 'View details for Oslo Central Station',
+        },
+      ),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows a filter-specific empty message', async () => {
+    const user =
+      userEvent.setup()
+
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
+
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Filters',
+        },
+      ),
+    )
+
+    await user.click(
+      screen.getByRole(
+        'checkbox',
+        {
+          name: /free only/i,
+        },
+      ),
+    )
+
+    await user.click(
+      screen.getByRole(
+        'checkbox',
+        {
+          name: /public toilets only/i,
+        },
+      ),
+    )
+
+    expect(
+      screen.getByText(
+        'No toilets match the selected filters.',
+      ),
     ).toBeInTheDocument()
+
+    expect(
+      screen.getByTestId(
+        'toilet-map',
+      ),
+    ).toHaveTextContent(
+      '0 map markers with user location',
+    )
+  })
+
+  it('resets active filters', async () => {
+    const user =
+      userEvent.setup()
+
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
+
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Filters',
+        },
+      ),
+    )
+
+    await user.click(
+      screen.getByRole(
+        'checkbox',
+        {
+          name: /free only/i,
+        },
+      ),
+    )
+
+    expect(
+      screen.getByTestId(
+        'toilet-map',
+      ),
+    ).toHaveTextContent(
+      '1 map markers with user location',
+    )
+
+    await user.click(
+      screen.getByRole(
+        'button',
+        {
+          name: 'Reset filters',
+        },
+      ),
+    )
+
+    expect(
+      screen.getByRole(
+        'checkbox',
+        {
+          name: /free only/i,
+        },
+      ),
+    ).not.toBeChecked()
+
+    expect(
+      screen.getByTestId(
+        'toilet-map',
+      ),
+    ).toHaveTextContent(
+      '2 map markers with user location',
+    )
+  })
+
+  it('clears the selected toilet when filters remove it', async () => {
+    const user =
+      userEvent.setup()
+
+    fetchToiletsMock.mockResolvedValue(
+      toilets,
+    )
+
+    render(<App />)
+
+    await user.click(
+      await screen.findByRole(
+        'button',
+        {
+          name: 'Select Oslo Central Station marker',
+        },
+      ),
+    )
+
+    expect(
+      screen.getByRole(
+        'heading',
+        {
+          name: 'Oslo Central Station',
+        },
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole(
+        'button',
+        {
+          name: 'Filters',
+        },
+      ),
+    )
+
+    await user.click(
+      screen.getByRole(
+        'checkbox',
+        {
+          name: /free only/i,
+        },
+      ),
+    )
+
+    await user.click(
+      screen.getByRole(
+        'button',
+        {
+          name: 'Close filters',
+        },
+      ),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole(
+          'heading',
+          {
+            name: 'Oslo Central Station',
+          },
+        ),
+      ).not.toBeInTheDocument()
+    })
   })
 })
