@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { fetchToilets } from './api/toiletsApi'
+import { ToiletDetailCard } from './components/ToiletDetailCard'
 import { ToiletList } from './components/ToiletList'
 import { ToiletMap } from './components/ToiletMap'
 import { useUserLocation } from './hooks/useUserLocation'
@@ -9,10 +14,20 @@ import { findNearbyToilets } from './utils/toiletSearch'
 import './App.css'
 
 function App() {
-  const [toilets, setToilets] = useState<Toilet[]>([])
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [showList, setShowList] = useState(false)
+  const [toilets, setToilets] =
+    useState<Toilet[]>([])
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [errorMessage, setErrorMessage] =
+    useState<string | null>(null)
+
+  const [showList, setShowList] =
+    useState(false)
+
+  const [selectedToilet, setSelectedToilet] =
+    useState<ToiletDisplayItem | null>(null)
 
   const {
     coordinates: userLocation,
@@ -25,26 +40,34 @@ function App() {
 
     async function loadToilets() {
       try {
-        const toiletData = await fetchToilets(controller.signal)
+        const toiletData = await fetchToilets(
+          controller.signal,
+        )
+
         setToilets(toiletData)
       } catch (error) {
         /*
          * Aborting is expected when React cleans up the effect.
          * It should therefore not be shown as an application error.
          */
-        if (error instanceof DOMException && error.name === 'AbortError') {
+        if (
+          error instanceof DOMException &&
+          error.name === 'AbortError'
+        ) {
           return
         }
 
         const message =
-          error instanceof Error ? error.message : 'Unknown error'
+          error instanceof Error
+            ? error.message
+            : 'Unknown error'
 
         setErrorMessage(message)
       } finally {
         /*
-         * The first effect can be aborted by StrictMode while a second
-         * request is starting. Avoid changing loading state for the
-         * cancelled request.
+         * StrictMode can cancel the first development request while
+         * starting another. The cancelled request must not change the
+         * shared loading state.
          */
         if (!controller.signal.aborted) {
           setLoading(false)
@@ -56,23 +79,28 @@ function App() {
 
     return () => {
       /*
-       * Cancelling prevents an obsolete request from updating state after
-       * this component unmounts or React restarts the effect in development.
+       * Cancelling prevents an obsolete request from updating state
+       * after unmounting or a StrictMode effect restart.
        */
       controller.abort()
     }
   }, [])
 
-  const displayedToilets: ToiletDisplayItem[] = useMemo(() => {
-    if (!userLocation) {
-      return toilets
-    }
+  const displayedToilets: ToiletDisplayItem[] =
+    useMemo(() => {
+      if (!userLocation) {
+        return toilets
+      }
 
-    return findNearbyToilets(toilets, userLocation)
-  }, [toilets, userLocation])
+      return findNearbyToilets(
+        toilets,
+        userLocation,
+      )
+    }, [toilets, userLocation])
 
   const showNoNearbyToiletsMessage =
-    userLocation !== null && displayedToilets.length === 0
+    userLocation !== null &&
+    displayedToilets.length === 0
 
   const locationStatusMessage = (() => {
     if (showNoNearbyToiletsMessage) {
@@ -97,6 +125,26 @@ function App() {
   const listEmptyMessage = userLocation
     ? 'No toilets found within 2 km.'
     : 'No toilets found.'
+
+  /**
+   * Stores the toilet selected from either the map or list.
+   *
+   * The list closes so it does not cover the detail card on smaller
+   * screens.
+   */
+  function handleSelectToilet(
+    toilet: ToiletDisplayItem,
+  ) {
+    setSelectedToilet(toilet)
+    setShowList(false)
+  }
+
+  /**
+   * Removes the current selection and hides the detail card.
+   */
+  function handleCloseToiletDetails() {
+    setSelectedToilet(null)
+  }
 
   return (
     <main className="app-shell">
@@ -133,6 +181,7 @@ function App() {
           <ToiletMap
             toilets={displayedToilets}
             userLocation={userLocation}
+            onSelectToilet={handleSelectToilet}
           />
 
           {locationStatusMessage && (
@@ -143,6 +192,15 @@ function App() {
             >
               <p>{locationStatusMessage}</p>
             </div>
+          )}
+
+          {selectedToilet && (
+            <ToiletDetailCard
+              toilet={selectedToilet}
+              onClose={
+                handleCloseToiletDetails
+              }
+            />
           )}
 
           {!showList && (
@@ -168,14 +226,22 @@ function App() {
                 type="button"
                 aria-expanded="true"
                 aria-controls="toilet-list-panel"
-                onClick={() => setShowList(false)}
+                onClick={() =>
+                  setShowList(false)
+                }
               >
                 Close list
               </button>
 
               <ToiletList
                 toilets={displayedToilets}
+                selectedToiletId={
+                  selectedToilet?.id
+                }
                 emptyMessage={listEmptyMessage}
+                onSelectToilet={
+                  handleSelectToilet
+                }
               />
             </aside>
           )}

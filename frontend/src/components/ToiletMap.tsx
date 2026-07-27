@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
-import { divIcon, type LatLngTuple } from 'leaflet'
+import {
+  divIcon,
+  type LatLngTuple,
+} from 'leaflet'
 import {
   MapContainer,
   Marker,
@@ -17,19 +20,29 @@ type ToiletMapProps = {
 
   /** User position when the browser has provided it. */
   userLocation: Coordinates | null
+
+  /** Called when the user selects a toilet marker. */
+  onSelectToilet: (
+    toilet: ToiletDisplayItem,
+  ) => void
 }
 
 type MapCenterControllerProps = {
   userLocation: Coordinates | null
 }
 
-const OSLO_CENTER: LatLngTuple = [59.9139, 10.7522]
+const OSLO_CENTER: LatLngTuple = [
+  59.9139,
+  10.7522,
+]
+
 const DEFAULT_MAP_ZOOM = 13
 
 /*
- * This icon lives outside the component so Leaflet does not receive a new
- * icon object every time React renders the map. A DivIcon also avoids the
- * extra image-path configuration required by Leaflet's default marker.
+ * This icon lives outside the component so Leaflet does not receive
+ * a new icon object every time React renders the map. A DivIcon also
+ * avoids the image-path configuration required by Leaflet's default
+ * marker.
  */
 const toiletIcon = divIcon({
   className: 'toilet-marker',
@@ -55,15 +68,21 @@ const userLocationIcon = divIcon({
   popupAnchor: [0, -14],
 })
 
-function toLatLngTuple(coordinates: Coordinates): LatLngTuple {
-  return [coordinates.latitude, coordinates.longitude]
+function toLatLngTuple(
+  coordinates: Coordinates,
+): LatLngTuple {
+  return [
+    coordinates.latitude,
+    coordinates.longitude,
+  ]
 }
 
 /**
- * Moves the already-created Leaflet map when the user's location arrives.
+ * Moves the already-created Leaflet map when the user's location
+ * arrives.
  *
- * The map uses a slightly zoomed-out view so mobile users can see more
- * of the surrounding city instead of only the closest streets.
+ * The slightly zoomed-out view gives mobile users a better overview
+ * of the surrounding area.
  */
 function MapCenterController({
   userLocation,
@@ -75,7 +94,10 @@ function MapCenterController({
       return
     }
 
-    map.setView(toLatLngTuple(userLocation), DEFAULT_MAP_ZOOM)
+    map.setView(
+      toLatLngTuple(userLocation),
+      DEFAULT_MAP_ZOOM,
+    )
   }, [map, userLocation])
 
   return null
@@ -84,12 +106,13 @@ function MapCenterController({
 /**
  * Displays nearby toilets and, when available, the user's position.
  *
- * @param toilets already-filtered toilets to show as markers
- * @param userLocation current user coordinates or null fallback
+ * The component reports marker selection to App but does not own the
+ * selected-toilet state.
  */
 export function ToiletMap({
   toilets,
   userLocation,
+  onSelectToilet,
 }: ToiletMapProps) {
   const initialCenter = userLocation
     ? toLatLngTuple(userLocation)
@@ -102,7 +125,9 @@ export function ToiletMap({
       scrollWheelZoom
       className="toilet-map"
     >
-      <MapCenterController userLocation={userLocation} />
+      <MapCenterController
+        userLocation={userLocation}
+      />
 
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -124,9 +149,16 @@ export function ToiletMap({
       {toilets.map((toilet) => (
         <Marker
           key={toilet.id}
-          position={[toilet.latitude, toilet.longitude]}
+          position={[
+            toilet.latitude,
+            toilet.longitude,
+          ]}
           icon={toiletIcon}
           title={toilet.name}
+          eventHandlers={{
+            click: () =>
+              onSelectToilet(toilet),
+          }}
         >
           <Popup>
             <article className="toilet-popup">
@@ -134,7 +166,10 @@ export function ToiletMap({
 
               {toilet.distanceMeters !== undefined && (
                 <p className="toilet-popup__distance">
-                  {formatDistance(toilet.distanceMeters)} away
+                  {formatDistance(
+                    toilet.distanceMeters,
+                  )}{' '}
+                  away
                 </p>
               )}
 
