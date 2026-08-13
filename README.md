@@ -16,7 +16,7 @@ Toilapp is a full-stack portfolio project built with Spring Boot, React and Type
 
 The application uses browser geolocation to find nearby toilets, calculates straight-line distance, displays the results on an interactive map and allows users to filter and inspect the available toilets.
 
-The current version focuses on Oslo and uses seeded toilet data from the Spring Boot backend.
+The current version focuses on Oslo and uses a seeded toilet dataset stored in PostgreSQL and served by the Spring Boot backend.
 
 ## Features
 
@@ -43,7 +43,7 @@ The current version focuses on Oslo and uses seeded toilet data from the Spring 
   - minimum cleanliness rating
 - Responsive desktop and mobile layouts
 - Frontend unit and integration tests
-- Backend controller and service tests
+- Backend controller, service, repository and seed-data tests
 
 ## Application preview
 
@@ -77,6 +77,8 @@ The toilet list adapts to smaller screens while retaining distance and availabil
 
 - Java 21
 - Spring Boot
+- Spring Data JPA
+- PostgreSQL
 - Maven
 - JUnit
 - Mockito
@@ -116,21 +118,24 @@ restroom-finder/
 │   └── vite.config.ts
 ├── docs/
 │   └── images/
+├── docker-compose.yml
 ├── .gitignore
 └── README.md
 ```
 
 ## How the application works
 
-1. The React frontend requests toilet data from the Spring Boot API.
-2. The browser is asked for the user's current position.
-3. The frontend calculates straight-line distance to each toilet.
-4. Toilets outside the 2 km radius are removed.
-5. User-selected filters are applied.
-6. Matching toilets remain ordered by distance.
-7. A maximum of six toilets is displayed.
-8. Selecting a map marker or list item opens a detail card.
-9. Google Maps can be opened with the toilet as the walking destination.
+1. PostgreSQL stores the toilet dataset.
+2. Spring Boot reads toilet data through Spring Data JPA.
+3. The React frontend requests the data from the REST API.
+4. The browser is asked for the user's current position.
+5. The frontend calculates straight-line distance to each toilet.
+6. Toilets outside the 2 km radius are removed.
+7. User-selected filters are applied.
+8. Matching toilets remain ordered by distance.
+9. A maximum of six toilets is displayed.
+10. Selecting a map marker or list item opens a detail card.
+11. Google Maps can be opened with the toilet as the walking destination.
 
 ## Design decisions
 
@@ -166,7 +171,19 @@ Toilapp generates a Google Maps URL with walking mode rather than implementing t
 
 - Java 21
 - Node.js and npm
+- Docker
 - Git
+
+## Run PostgreSQL
+
+Start the PostgreSQL service from the project root:
+
+```powershell
+docker compose up -d postgres
+docker compose ps
+```
+
+The database name is `toilapp`, and PostgreSQL is available on port `5432`. Its data is stored in a named Docker volume and survives normal container restarts.
 
 ## Run the backend
 
@@ -253,14 +270,12 @@ cd backend
 - Opening hours are not yet included.
 - Detailed accessibility information is not yet included.
 - Cleanliness ratings are seeded values rather than user-generated ratings.
-- The application does not yet use a persistent database.
 - The application does not yet include user accounts.
 - Navigation is handed off to Google Maps.
 - The application is not yet deployed publicly.
 
 ## Planned improvements
 
-- PostgreSQL persistence
 - A larger municipal or external toilet dataset
 - Opening hours and availability status
 - Wheelchair accessibility information
@@ -285,7 +300,7 @@ The frontend test suite covers:
 - detail-card content
 - Google Maps walking URLs
 
-The backend tests cover the existing API and service behavior.
+The backend tests cover the existing API, service and repository behavior, including seed-data persistence and duplicate prevention.
 
 ## Author
 

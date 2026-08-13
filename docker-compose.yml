@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: toilapp-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: toilapp
+      POSTGRES_USER: toilapp
+      POSTGRES_PASSWORD: toilapp_dev
+
+    ports:
+      - "127.0.0.1:5432:5432"
+
+    volumes:
+      - toilapp-postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U toilapp -d toilapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  toilapp-postgres-data:
