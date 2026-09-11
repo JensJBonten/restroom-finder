@@ -67,28 +67,31 @@ function getLocationErrorDetails(
 
 export function useUserLocation(): UserLocationResult {
   const [locationResult, setLocationResult] =
-    useState<UserLocationResult>({
-      coordinates: null,
-      status: 'loading',
-      errorMessage: null,
+    useState<UserLocationResult>(() => {
+      const supportsGeolocation =
+        typeof navigator !== 'undefined' &&
+        !!navigator.geolocation
+
+      return {
+        coordinates: null,
+        status: supportsGeolocation ? 'loading' : 'unsupported',
+        errorMessage: supportsGeolocation
+          ? null
+          : 'This browser does not support location services.',
+      }
     })
 
   useEffect(() => {
     let isSubscribed = true
 
-    if (!navigator.geolocation) {
-      setLocationResult({
-        coordinates: null,
-        status: 'unsupported',
-        errorMessage:
-          'This browser does not support location services.',
-      })
-
-      return () => {
-        isSubscribed = false
-      }
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.geolocation
+    ) {
+      return
     }
 
+    // Resten av den eksisterende effekten fortsetter her.
     navigator.geolocation.getCurrentPosition(
       (position) => {
         if (!isSubscribed) {
