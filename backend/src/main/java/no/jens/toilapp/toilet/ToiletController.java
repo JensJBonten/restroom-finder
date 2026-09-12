@@ -7,9 +7,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Exposes REST endpoints used by Toilapp frontend.
- */
 @RestController
 @RequestMapping("/api/toilets")
 public class ToiletController {
@@ -20,26 +17,18 @@ public class ToiletController {
         this.toiletService = toiletService;
     }
 
-    /**
-     * Returns all toilets currently available in the application.
-     *
-     * @return all registered toilets.
-     */
     @GetMapping
-    public List<Toilet> getToilets() {
-        return toiletService.getAllToilets();
+    public List<ToiletResponse> getToilets() {
+        return toiletService.getAllToilets()
+                .stream()
+                .map(ToiletResponse::from)
+                .toList();
     }
 
-    /**
-     * Returns one toilet based on its unique identifier.
-     *
-     * @param id the toilet identifier
-     * @return the matching toilet
-     * @throws ToiletNotFoundException when the toilet does not exist
-     */
     @GetMapping("/{id}")
-    public Toilet getToiletById(@PathVariable Long id) {
+    public ToiletResponse getToiletById(@PathVariable Long id) {
         return toiletService.getToiletById(id)
+                .map(ToiletResponse::from)
                 .orElseThrow(() -> new ToiletNotFoundException(id));
     }
 }

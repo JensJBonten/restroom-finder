@@ -2,8 +2,13 @@ package no.jens.toilapp.toilet;
 
 import jakarta.persistence.*;
 
+import java.time.Instant;
+
 /**
- * Represents one toilet stored by Toilapp and returned by the REST API.
+ * An imported public toilet.
+ *
+ * The generated ID identifies the local database row, while source and sourceId
+ * identify the corresponding record in the external dataset.
  */
 
 @Entity
@@ -11,112 +16,111 @@ import jakarta.persistence.*;
         name = "toilets",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uq_toilets_name_address",
-                        columnNames = {"name", "address"}
+                        name = "uq_toilets_source_source_id",
+                        columnNames = {"source", "source_id"}
                 )
         }
 )
-public class Toilet {
 
+public class Toilet {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private  Long id;
+    private Long id;
 
-    @Column(nullable = false, length = 150)
-    private  String name;
 
-    @Column(nullable = false, length = 200)
-    private  String address;
 
-    @Column(nullable = false)
-    private  double latitude;
+    @Column(nullable = false, length = 100)
+    private String source;
 
-    @Column(nullable = false)
-    private  double longitude;
-
-    @Column(nullable = false)
-    private  boolean free;
-
-    @Column(name = "public_toilet", nullable = false)
-    private  boolean publicToilet;
-
-    @Column(name = "requires_entry", nullable = false)
-    private  boolean requiresEntry;
-
-    @Column(name = "cleanliness_rating", nullable = false)
-    private  double cleanlinessRating;
+    @Column(name = "source_id", nullable = false, length = 255)
+    private String sourceId;
 
     /**
-     * Required by JPA.
+     * Missing source data is stored as null rather than converted
+     * into potentially incorrect default values.
      */
+    @Column(length = 255)
+    private String name;
+
+    @Column(nullable = false)
+    private double latitude;
+
+    @Column(nullable = false)
+    private double longitude;
+
+    @Column(name = "toilet_type", length = 100)
+    private String toiletType;
+
+    @Column(name = "accessibility_status", length = 100)
+    private String accessibilityStatus;
+
+    @Column(columnDefinition = "TEXT")
+    private String comments;
+
+    @Column(name = "source_modified_at")
+    private Instant sourceModifiedAt;
+
 
     protected Toilet() {
     }
 
-    /**
-     * Creates a new toilet that nhas not yet received a database ID.
-     */
     public Toilet(
+            String source,
+            String sourceId,
             String name,
-            String address,
             double latitude,
             double longitude,
-            boolean free,
-            boolean publicToilet,
-            boolean requiresEntry,
-            double cleanlinessRating
+            String toiletType,
+            String accessibilityStatus,
+            String comments,
+            Instant sourceModifiedAt
     ) {
-        this(
-                null,
-                name,
-                address,
-                latitude,
-                longitude,
-                free,
-                publicToilet,
-                requiresEntry,
-                cleanlinessRating
-        );
+        this.source = source;
+        this.sourceId = sourceId;
+        this.name = name;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.toiletType = toiletType;
+        this.accessibilityStatus = accessibilityStatus;
+        this.comments = comments;
+        this.sourceModifiedAt = sourceModifiedAt;
     }
 
     /**
-     * Creating toilet with a explicit ID.
-     *
-     * Constructer kept for ecisting tests and application code.
+     * Updates source-controlled fields without changing either identity.
      */
-
-    public Toilet(
-            Long id,
+    public void updateSourceDetails(
             String name,
-            String address,
             double latitude,
             double longitude,
-            boolean free,
-            boolean publicToilet,
-            boolean requiresEntry,
-            double cleanlinessRating
+            String toiletType,
+            String accessibilityStatus,
+            String comments,
+            Instant sourceModifiedAt
     ) {
-        this.id = id;
         this.name = name;
-        this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.free = free;
-        this.publicToilet = publicToilet;
-        this.requiresEntry = requiresEntry;
-        this.cleanlinessRating = cleanlinessRating;
+        this.toiletType = toiletType;
+        this.accessibilityStatus = accessibilityStatus;
+        this.comments = comments;
+        this.sourceModifiedAt = sourceModifiedAt;
     }
 
     public Long getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public String getSource() {
+        return source;
     }
 
-    public String getAddress() {
-        return address;
+    public String getSourceId() {
+        return sourceId;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public double getLatitude() {
@@ -127,19 +131,19 @@ public class Toilet {
         return longitude;
     }
 
-    public boolean isFree() {
-        return free;
+    public String getToiletType() {
+        return toiletType;
     }
 
-    public boolean isPublicToilet() {
-        return publicToilet;
+    public String getAccessibilityStatus() {
+        return accessibilityStatus;
     }
 
-    public boolean isRequiresEntry() {
-        return requiresEntry;
+    public String getComments() {
+        return comments;
     }
 
-    public double getCleanlinessRating() {
-        return cleanlinessRating;
+    public Instant getSourceModifiedAt() {
+        return sourceModifiedAt;
     }
 }
