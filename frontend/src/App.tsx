@@ -15,7 +15,10 @@ import './App.css'
 
 type OpenPanel = 'list' | null
 
-const OSLO_CENTER: Coordinates = { latitude: 59.9139, longitude: 10.7522 }
+const OSLO_CENTER: Coordinates = {
+  latitude: 59.9139,
+  longitude: 10.7522,
+}
 
 function App() {
   const [toilets, setToilets] = useState<Toilet[]>([])
@@ -25,7 +28,8 @@ function App() {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
 
   // Store only the identity so selection is derived from current search results.
-  const [selectedToiletId, setSelectedToiletId] = useState<Toilet['id'] | null>(null)
+  const [selectedToiletId, setSelectedToiletId] =
+    useState<Toilet['id'] | null>(null)
 
   const {
     coordinates: userLocation,
@@ -33,10 +37,16 @@ function App() {
     errorMessage: userLocationErrorMessage,
   } = useUserLocation()
 
-  // Searching Oslo must not move the marker for the user's real location.
-  const searchCenter = isShowingOslo ? OSLO_CENTER : userLocation
-  const mapCenter = searchCenter ?? OSLO_CENTER
-  const searchArea = `${searchCenter?.latitude},${searchCenter?.longitude}`
+  /*
+   * Oslo is the search fallback when a position is unavailable.
+   * userLocation remains null so the map does not show a false user marker.
+   */
+  const searchCenter = isShowingOslo
+    ? OSLO_CENTER
+    : (userLocation ?? OSLO_CENTER)
+
+  const mapCenter = searchCenter
+  const searchArea = `${searchCenter.latitude},${searchCenter.longitude}`
   const [previousSearchArea, setPreviousSearchArea] = useState(searchArea)
 
   if (previousSearchArea !== searchArea) {
@@ -57,7 +67,11 @@ function App() {
           return
         }
 
-        const message = error instanceof Error ? error.message : 'Ukjent feil'
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Ukjent feil'
+
         setErrorMessage(message)
       } finally {
         // A cancelled request must not complete another request's loading state.
@@ -73,15 +87,13 @@ function App() {
   }, [])
 
   // Calculate all nearby toilets before limiting the visible result list.
-  const nearbyToilets: ToiletDisplayItem[] = useMemo(() => {
-    if (!searchCenter) {
-      return toilets
-    }
-
-    return findNearbyToilets(toilets, searchCenter, {
-      maximumResults: toilets.length,
-    })
-  }, [toilets, searchCenter])
+  const nearbyToilets: ToiletDisplayItem[] = useMemo(
+    () =>
+      findNearbyToilets(toilets, searchCenter, {
+        maximumResults: toilets.length,
+      }),
+    [toilets, searchCenter],
+  )
 
   const displayedToilets = useMemo(
     () => nearbyToilets.slice(0, DEFAULT_MAXIMUM_RESULTS),
@@ -93,7 +105,9 @@ function App() {
     displayedToilets.find((toilet) => toilet.id === selectedToiletId) ?? null
 
   const showNoNearbyToiletsMessage =
-    !isShowingOslo && userLocation !== null && nearbyToilets.length === 0
+    !isShowingOslo &&
+    userLocation !== null &&
+    nearbyToilets.length === 0
 
   const locationStatusMessage = (() => {
     if (isShowingOslo) {
@@ -119,9 +133,7 @@ function App() {
     return null
   })()
 
-  const listEmptyMessage = searchCenter
-    ? 'Ingen toaletter funnet innenfor 2 km.'
-    : 'Ingen toaletter funnet.'
+  const listEmptyMessage = 'Ingen toaletter funnet innenfor 2 km.'
 
   function handleSelectToilet(toilet: ToiletDisplayItem) {
     setSelectedToiletId(toilet.id)
@@ -142,14 +154,20 @@ function App() {
       </header>
 
       {loading && (
-        <section className="status-panel" aria-live="polite" aria-busy="true">
+        <section
+          className="status-panel"
+          aria-live="polite"
+          aria-busy="true"
+        >
           <p>Laster toaletter...</p>
         </section>
       )}
 
       {errorMessage && (
         <section className="status-panel status-panel--error">
-          <p role="alert">Kunne ikke laste toaletter: {errorMessage}</p>
+          <p role="alert">
+            Kunne ikke laste toaletter: {errorMessage}
+          </p>
         </section>
       )}
 
@@ -172,6 +190,7 @@ function App() {
               aria-live="polite"
             >
               <p>{locationStatusMessage}</p>
+
               {showNoNearbyToiletsMessage && (
                 <button
                   className="map-action-button oslo-fallback-button"
