@@ -124,6 +124,14 @@
   transform: translateX(-50%);
 }
 
+.location-status-card:has(.oslo-fallback-button) {
+  border-radius: 16px;
+}
+
+.oslo-fallback-button {
+  margin-top: 10px;
+}
+
 .location-status-card p {
   margin: 0;
   font-size: 0.9rem;

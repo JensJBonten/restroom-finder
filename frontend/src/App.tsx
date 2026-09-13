@@ -4,6 +4,7 @@ import { ToiletDetailCard } from './components/ToiletDetailCard'
 import { ToiletList } from './components/ToiletList'
 import { ToiletMap } from './components/ToiletMap'
 import { useUserLocation } from './hooks/useUserLocation'
+import type { Coordinates } from './types/Coordinates'
 import type { Toilet } from './types/Toilet'
 import type { ToiletDisplayItem } from './types/ToiletDisplayItem'
 import {
@@ -14,10 +15,13 @@ import './App.css'
 
 type OpenPanel = 'list' | null
 
+const OSLO_CENTER: Coordinates = { latitude: 59.9139, longitude: 10.7522 }
+
 function App() {
   const [toilets, setToilets] = useState<Toilet[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isShowingOslo, setIsShowingOslo] = useState(false)
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
 
   // Store only the identity so selection is derived from current search results.
@@ -28,6 +32,17 @@ function App() {
     status: userLocationStatus,
     errorMessage: userLocationErrorMessage,
   } = useUserLocation()
+
+  // Searching Oslo must not move the marker for the user's real location.
+  const searchCenter = isShowingOslo ? OSLO_CENTER : userLocation
+  const mapCenter = searchCenter ?? OSLO_CENTER
+  const searchArea = `${searchCenter?.latitude},${searchCenter?.longitude}`
+  const [previousSearchArea, setPreviousSearchArea] = useState(searchArea)
+
+  if (previousSearchArea !== searchArea) {
+    setPreviousSearchArea(searchArea)
+    setSelectedToiletId(null)
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -59,14 +74,14 @@ function App() {
 
   // Calculate all nearby toilets before limiting the visible result list.
   const nearbyToilets: ToiletDisplayItem[] = useMemo(() => {
-    if (!userLocation) {
+    if (!searchCenter) {
       return toilets
     }
 
-    return findNearbyToilets(toilets, userLocation, {
+    return findNearbyToilets(toilets, searchCenter, {
       maximumResults: toilets.length,
     })
-  }, [toilets, userLocation])
+  }, [toilets, searchCenter])
 
   const displayedToilets = useMemo(
     () => nearbyToilets.slice(0, DEFAULT_MAXIMUM_RESULTS),
@@ -78,9 +93,13 @@ function App() {
     displayedToilets.find((toilet) => toilet.id === selectedToiletId) ?? null
 
   const showNoNearbyToiletsMessage =
-    userLocation !== null && nearbyToilets.length === 0
+    !isShowingOslo && userLocation !== null && nearbyToilets.length === 0
 
   const locationStatusMessage = (() => {
+    if (isShowingOslo) {
+      return `Viser ${displayedToilets.length} av ${nearbyToilets.length} toaletter nær Oslo sentrum.`
+    }
+
     if (userLocationErrorMessage) {
       return userLocationErrorMessage
     }
@@ -90,7 +109,7 @@ function App() {
     }
 
     if (showNoNearbyToiletsMessage) {
-      return 'Ingen toaletter funnet innenfor 2 km.'
+      return 'Ingen toaletter funnet i nærheten. Datakilden dekker foreløpig Oslo.'
     }
 
     if (userLocationStatus === 'success') {
@@ -100,7 +119,7 @@ function App() {
     return null
   })()
 
-  const listEmptyMessage = userLocation
+  const listEmptyMessage = searchCenter
     ? 'Ingen toaletter funnet innenfor 2 km.'
     : 'Ingen toaletter funnet.'
 
@@ -141,6 +160,7 @@ function App() {
         >
           <ToiletMap
             toilets={displayedToilets}
+            mapCenter={mapCenter}
             userLocation={userLocation}
             onSelectToilet={handleSelectToilet}
           />
@@ -152,6 +172,18 @@ function App() {
               aria-live="polite"
             >
               <p>{locationStatusMessage}</p>
+              {showNoNearbyToiletsMessage && (
+                <button
+                  className="map-action-button oslo-fallback-button"
+                  type="button"
+                  onClick={() => {
+                    setIsShowingOslo(true)
+                    setSelectedToiletId(null)
+                  }}
+                >
+                  Vis Oslo
+                </button>
+              )}
             </div>
           )}
 

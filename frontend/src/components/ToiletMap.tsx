@@ -14,15 +14,15 @@ import { formatAccessibility, formatToiletName } from '../utils/toiletDisplay'
 
 type ToiletMapProps = {
   toilets: ToiletDisplayItem[]
+  mapCenter: Coordinates
   userLocation: Coordinates | null
   onSelectToilet: (toilet: ToiletDisplayItem) => void
 }
 
 type MapCenterControllerProps = {
-  userLocation: Coordinates | null
+  mapCenter: Coordinates
 }
 
-const OSLO_CENTER: LatLngTuple = [59.9139, 10.7522]
 const DEFAULT_MAP_ZOOM = 13
 
 // Reuse DivIcons across renders and avoid Leaflet's default image-path setup.
@@ -54,17 +54,12 @@ function toLatLngTuple(coordinates: Coordinates): LatLngTuple {
   return [coordinates.latitude, coordinates.longitude]
 }
 
-/**
- * Recenters the existing Leaflet map when the browser provides a location.
- */
-function MapCenterController({ userLocation }: MapCenterControllerProps) {
+function MapCenterController({ mapCenter }: MapCenterControllerProps) {
   const map = useMap()
 
   useEffect(() => {
-    if (userLocation) {
-      map.setView(toLatLngTuple(userLocation), DEFAULT_MAP_ZOOM)
-    }
-  }, [map, userLocation])
+    map.setView(toLatLngTuple(mapCenter), DEFAULT_MAP_ZOOM)
+  }, [map, mapCenter])
 
   return null
 }
@@ -74,21 +69,18 @@ function MapCenterController({ userLocation }: MapCenterControllerProps) {
  */
 export function ToiletMap({
   toilets,
+  mapCenter,
   userLocation,
   onSelectToilet,
 }: ToiletMapProps) {
-  const initialCenter = userLocation
-    ? toLatLngTuple(userLocation)
-    : OSLO_CENTER
-
   return (
     <MapContainer
-      center={initialCenter}
+      center={toLatLngTuple(mapCenter)}
       zoom={DEFAULT_MAP_ZOOM}
       scrollWheelZoom
       className="toilet-map"
     >
-      <MapCenterController userLocation={userLocation} />
+      <MapCenterController mapCenter={mapCenter} />
 
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
