@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Coordinates } from '../types/Coordinates'
 
-export type UserLocationStatus =
-  | 'loading'
-  | 'success'
-  | 'denied'
-  | 'unsupported'
-  | 'error'
+export type UserLocationStatus = 'loading' | 'success' | 'denied' | 'unsupported' | 'error'
 
 export type UserLocationResult = {
   coordinates: Coordinates | null
@@ -34,15 +29,13 @@ function getLocationErrorDetails(
     case error.POSITION_UNAVAILABLE:
       return {
         status: 'error',
-        errorMessage:
-          'Kunne ikke finne posisjonen din.',
+        errorMessage: 'Kunne ikke finne posisjonen din.',
       }
 
     case error.TIMEOUT:
       return {
         status: 'error',
-        errorMessage:
-          'Det tok for lang tid å finne posisjonen din.',
+        errorMessage: 'Det tok for lang tid å finne posisjonen din.',
       }
 
     default:
@@ -54,30 +47,24 @@ function getLocationErrorDetails(
   }
 }
 
-// Null coordinates let the map fall back to Oslo so toilets remain discoverable.
+// Report the real position only; App owns the Oslo search fallback.
 export function useUserLocation(): UserLocationResult {
-  const [locationResult, setLocationResult] =
-    useState<UserLocationResult>(() => {
-      const supportsGeolocation =
-        typeof navigator !== 'undefined' &&
-        !!navigator.geolocation
+  const [locationResult, setLocationResult] = useState<UserLocationResult>(() => {
+    const supportsGeolocation = typeof navigator !== 'undefined' && !!navigator.geolocation
 
-      return {
-        coordinates: null,
-        status: supportsGeolocation ? 'loading' : 'unsupported',
-        errorMessage: supportsGeolocation
-          ? null
-          : 'Nettleseren din støtter ikke posisjonstjenester.',
-      }
-    })
+    return {
+      coordinates: null,
+      status: supportsGeolocation ? 'loading' : 'unsupported',
+      errorMessage: supportsGeolocation
+        ? null
+        : 'Nettleseren din støtter ikke posisjonstjenester.',
+    }
+  })
 
   useEffect(() => {
     let isSubscribed = true
 
-    if (
-      typeof navigator === 'undefined' ||
-      !navigator.geolocation
-    ) {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
       return
     }
 
@@ -111,11 +98,7 @@ export function useUserLocation(): UserLocationResult {
       GEOLOCATION_OPTIONS,
     )
 
-    /*
-     * getCurrentPosition does not provide an AbortController-like
-     * cancellation method. The flag prevents a late browser callback
-     * from updating state after the component has unmounted.
-     */
+    // Geolocation requests cannot be cancelled. Ignore callbacks that arrive after unmount.
     return () => {
       isSubscribed = false
     }

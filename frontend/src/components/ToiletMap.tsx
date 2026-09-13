@@ -1,12 +1,6 @@
 import { useEffect } from 'react'
 import { divIcon, type LatLngTuple } from 'leaflet'
-import {
-  MapContainer,
-  Marker,
-  Popup,
-  TileLayer,
-  useMap,
-} from 'react-leaflet'
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import type { Coordinates } from '../types/Coordinates'
 import type { ToiletDisplayItem } from '../types/ToiletDisplayItem'
 import { formatDistance } from '../utils/distance'
@@ -54,6 +48,7 @@ function toLatLngTuple(coordinates: Coordinates): LatLngTuple {
   return [coordinates.latitude, coordinates.longitude]
 }
 
+// Changing MapContainer props does not recenter an existing map, so update Leaflet directly.
 function MapCenterController({ mapCenter }: MapCenterControllerProps) {
   const map = useMap()
 
@@ -64,9 +59,6 @@ function MapCenterController({ mapCenter }: MapCenterControllerProps) {
   return null
 }
 
-/**
- * Displays toilet markers and delegates marker selection to App.
- */
 export function ToiletMap({
   toilets,
   mapCenter,
@@ -88,11 +80,7 @@ export function ToiletMap({
       />
 
       {userLocation && (
-        <Marker
-          position={toLatLngTuple(userLocation)}
-          icon={userLocationIcon}
-          title="Din posisjon"
-        >
+        <Marker position={toLatLngTuple(userLocation)} icon={userLocationIcon} title="Din posisjon">
           <Popup>
             <p>Du er her</p>
           </Popup>

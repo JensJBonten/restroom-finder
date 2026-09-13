@@ -25,9 +25,7 @@ public class ToiletSourceClient {
     }
 
     public List<JsonNode> fetchAllToiletFeatures() {
-        /**
-         * Fetching the count first so that the completed pagination can be verified.
-         */
+        // Fetch the count first so we can check that all pages were received.
         int expectedRecordCount = fetchExpectedRecordCount();
         if (expectedRecordCount <= 0) {
             throw new ToiletSourceException(
@@ -47,13 +45,12 @@ public class ToiletSourceClient {
             toiletFeatures.addAll(featurePage);
         }
 
-        /**
-         * Rejecting partial results instead of treating them as a complete dataset.
-         */
+        // Stop an incomplete fetch before any records reach the database writer.
         if (toiletFeatures.size() != expectedRecordCount) {
             throw new ToiletSourceException("Expected " + expectedRecordCount + " records, but received " +
                     toiletFeatures.size());
         }
+
         return List.copyOf(toiletFeatures);
     }
 
@@ -127,7 +124,6 @@ public class ToiletSourceClient {
     }
 
     private void validateArcGisResponse(JsonNode sourceResponse) {
-
         // ArcGIS can return an error body with HTTP status 200.
         JsonNode error = sourceResponse.get("error");
 

@@ -7,18 +7,12 @@ import { useUserLocation } from './hooks/useUserLocation'
 import type { Coordinates } from './types/Coordinates'
 import type { Toilet } from './types/Toilet'
 import type { ToiletDisplayItem } from './types/ToiletDisplayItem'
-import {
-  DEFAULT_MAXIMUM_RESULTS,
-  findNearbyToilets,
-} from './utils/toiletSearch'
+import { DEFAULT_MAXIMUM_RESULTS, findNearbyToilets } from './utils/toiletSearch'
 import './App.css'
 
 type OpenPanel = 'list' | null
 
-const OSLO_CENTER: Coordinates = {
-  latitude: 59.9139,
-  longitude: 10.7522,
-}
+const OSLO_CENTER: Coordinates = { latitude: 59.9139, longitude: 10.7522 }
 
 function App() {
   const [toilets, setToilets] = useState<Toilet[]>([])
@@ -28,8 +22,7 @@ function App() {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
 
   // Store only the identity so selection is derived from current search results.
-  const [selectedToiletId, setSelectedToiletId] =
-    useState<Toilet['id'] | null>(null)
+  const [selectedToiletId, setSelectedToiletId] = useState<Toilet['id'] | null>(null)
 
   const {
     coordinates: userLocation,
@@ -37,18 +30,14 @@ function App() {
     errorMessage: userLocationErrorMessage,
   } = useUserLocation()
 
-  /*
-   * Oslo is the search fallback when a position is unavailable.
-   * userLocation remains null so the map does not show a false user marker.
-   */
-  const searchCenter = isShowingOslo
-    ? OSLO_CENTER
-    : (userLocation ?? OSLO_CENTER)
+  // App searches Oslo when no real position is available, without adding a false user marker.
+  const searchCenter = isShowingOslo ? OSLO_CENTER : (userLocation ?? OSLO_CENTER)
 
   const mapCenter = searchCenter
   const searchArea = `${searchCenter.latitude},${searchCenter.longitude}`
   const [previousSearchArea, setPreviousSearchArea] = useState(searchArea)
 
+  // A new search area should not reopen a toilet selected in the previous area.
   if (previousSearchArea !== searchArea) {
     setPreviousSearchArea(searchArea)
     setSelectedToiletId(null)
@@ -67,10 +56,7 @@ function App() {
           return
         }
 
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Ukjent feil'
+        const message = error instanceof Error ? error.message : 'Ukjent feil'
 
         setErrorMessage(message)
       } finally {
@@ -86,12 +72,9 @@ function App() {
     return () => controller.abort()
   }, [])
 
-  // Calculate all nearby toilets before limiting the visible result list.
+  // Keep the full nearby count for the status message, then display only the closest six.
   const nearbyToilets: ToiletDisplayItem[] = useMemo(
-    () =>
-      findNearbyToilets(toilets, searchCenter, {
-        maximumResults: toilets.length,
-      }),
+    () => findNearbyToilets(toilets, searchCenter, { maximumResults: toilets.length }),
     [toilets, searchCenter],
   )
 
@@ -100,14 +83,12 @@ function App() {
     [nearbyToilets],
   )
 
-  // Deriving selection avoids synchronously changing state in an effect.
+  // Derive details from current results so the map and list share the same selection.
   const selectedToilet =
     displayedToilets.find((toilet) => toilet.id === selectedToiletId) ?? null
 
   const showNoNearbyToiletsMessage =
-    !isShowingOslo &&
-    userLocation !== null &&
-    nearbyToilets.length === 0
+    !isShowingOslo && userLocation !== null && nearbyToilets.length === 0
 
   const locationStatusMessage = (() => {
     if (isShowingOslo) {
@@ -154,28 +135,19 @@ function App() {
       </header>
 
       {loading && (
-        <section
-          className="status-panel"
-          aria-live="polite"
-          aria-busy="true"
-        >
+        <section className="status-panel" aria-live="polite" aria-busy="true">
           <p>Laster toaletter...</p>
         </section>
       )}
 
       {errorMessage && (
         <section className="status-panel status-panel--error">
-          <p role="alert">
-            Kunne ikke laste toaletter: {errorMessage}
-          </p>
+          <p role="alert">Kunne ikke laste toaletter: {errorMessage}</p>
         </section>
       )}
 
       {!loading && !errorMessage && (
-        <section
-          className="map-wrapper"
-          aria-label="Kart over toaletter i nærheten"
-        >
+        <section className="map-wrapper" aria-label="Kart over toaletter i nærheten">
           <ToiletMap
             toilets={displayedToilets}
             mapCenter={mapCenter}
@@ -184,11 +156,7 @@ function App() {
           />
 
           {locationStatusMessage && (
-            <div
-              className="location-status-card"
-              role="status"
-              aria-live="polite"
-            >
+            <div className="location-status-card" role="status" aria-live="polite">
               <p>{locationStatusMessage}</p>
 
               {showNoNearbyToiletsMessage && (
@@ -207,10 +175,7 @@ function App() {
           )}
 
           {selectedToilet && openPanel === null && (
-            <ToiletDetailCard
-              toilet={selectedToilet}
-              onClose={handleCloseToiletDetails}
-            />
+            <ToiletDetailCard toilet={selectedToilet} onClose={handleCloseToiletDetails} />
           )}
 
           {openPanel === null && (

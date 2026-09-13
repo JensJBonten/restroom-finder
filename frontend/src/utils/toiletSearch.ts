@@ -11,18 +11,7 @@ type NearbyToiletOptions = {
   maximumResults?: number
 }
 
-/**
- * Finds the toilets closest to the supplied user position.
- *
- * The current distance is straight-line distance, not real walking
- * distance. It is used as a simple nearby filter until the backend
- * supports routing-based walking distance.
- *
- * @param toilets toilets returned by the backend
- * @param userLocation current user coordinates
- * @param options optional radius and result-count overrides
- * @returns nearby toilets sorted by straight-line distance
- */
+// The supplied position is the active search centre, which can be the user’s position or Oslo.
 export function findNearbyToilets(
   toilets: Toilet[],
   userLocation: Coordinates,
@@ -42,21 +31,16 @@ export function findNearbyToilets(
 
       return {
         ...toilet,
-        distanceMeters: calculateDistanceInMeters(
-          userLocation,
-          toiletLocation,
-        ),
+        distanceMeters: calculateDistanceInMeters(userLocation, toiletLocation),
       }
     })
     .filter(
       (toilet) =>
-        toilet.distanceMeters !== undefined &&
-        toilet.distanceMeters <= searchRadiusMeters,
+        toilet.distanceMeters !== undefined && toilet.distanceMeters <= searchRadiusMeters,
     )
     .sort(
       (firstToilet, secondToilet) =>
-        (firstToilet.distanceMeters ?? 0) -
-        (secondToilet.distanceMeters ?? 0),
+        (firstToilet.distanceMeters ?? 0) - (secondToilet.distanceMeters ?? 0),
     )
     .slice(0, maximumResults)
 }

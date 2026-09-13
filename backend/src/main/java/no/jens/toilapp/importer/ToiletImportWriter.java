@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Applies a fully fetched and validated source dataset in one transaction.
+ * A separate bean lets Spring apply one transaction when the import service calls it.
+ * Fetching and mapping finish before this database transaction starts.
  */
 @Component
 public class ToiletImportWriter {
@@ -38,6 +39,7 @@ public class ToiletImportWriter {
                 continue;
             }
 
+            // Hibernate tracks changes to this managed entity and writes them without another save call.
             if (existingToilet.get().synchronizeSourceDetails(sourceToilet)) {
                 updatedCount++;
             } else {
