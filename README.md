@@ -1,110 +1,68 @@
 # Toilapp
 
-A full-stack restroom finder that helps users locate nearby toilets, inspect relevant details and open walking directions in Google Maps.
+Toilapp helps people find public toilets in Oslo, inspect the available information and open walking directions in Google Maps. The user-facing interface is in Norwegian.
 
-<p align="center">
-  <img
-    src="docs/images/toilapp-overview.jpg"
-    alt="Toilapp map showing nearby toilets, the user's location and a selected toilet"
-    width="100%"
-  >
-</p>
+- [Open the live application](https://toilapp-frontend-production.up.railway.app)
+- [View the live toilet API](https://toilapp-backend-production.up.railway.app/api/toilets)
 
-## Overview
-
-Toilapp is a full-stack portfolio project built with Spring Boot, React and TypeScript.
-
-The application uses browser geolocation to find nearby toilets, calculates straight-line distance, displays the results on an interactive map and allows users to filter and inspect the available toilets.
-
-The current version focuses on Oslo and uses a seeded toilet dataset stored in PostgreSQL and served by the Spring Boot backend.
+The application is deployed on Railway with separate frontend, backend and PostgreSQL services. **82 toilets were imported successfully from Oslo municipality on 13 September 2026.**
 
 ## Features
 
-- Browser geolocation
-- Graceful Oslo fallback when location access is unavailable
-- Interactive map built with React Leaflet and OpenStreetMap
-- Straight-line distance calculation
-- Toilets restricted to a 2 km search radius
-- Nearest-first result ordering
-- Maximum of six displayed results
-- Toilet selection from both map markers and list items
-- Detailed toilet information:
-  - address
-  - straight-line distance
-  - free or paid
-  - public or other documented toilet
-  - entry requirement
-  - cleanliness rating
+- Browser geolocation, with Oslo as a fallback search area
+- Interactive React Leaflet map with OpenStreetMap tiles
+- Up to six nearby results within 2 km, ordered by straight-line distance
+- Selection from map markers or a list, with a shared detail view
+- Toilet names, recorded accessibility status and source comments
 - Google Maps walking directions
-- User-controlled filters:
-  - free only
-  - public toilets only
-  - no entry required
-  - minimum cleanliness rating
 - Responsive desktop and mobile layouts
-- Frontend unit and integration tests
-- Backend controller, service, repository and seed-data tests
 
-## Application preview
+## Technology
 
-### Filter nearby toilets
+The backend uses Java 21, Spring Boot, Spring Data JPA and PostgreSQL. Flyway manages the database schema, and Maven builds the application. Backend tests use JUnit, Mockito and H2.
 
-Users can filter the displayed toilets by price, toilet type, entry requirements and minimum cleanliness rating.
+The frontend uses React, TypeScript and Vite, with React Leaflet for the map. Vitest and React Testing Library cover frontend behavior. Local development uses Docker Compose to run PostgreSQL.
 
-<p align="center">
-  <img
-    src="docs/images/toilapp-filters.jpg"
-    alt="Toilapp filter panel displayed beside the map"
-    width="100%"
-  >
-</p>
+## How the application works
 
-### Responsive toilet list
+An explicit import reads toilet data from Oslo municipality's ArcGIS service and stores it in PostgreSQL. During normal use, the Spring Boot API reads this stored data; it does not contact the municipality for every visitor.
 
-The toilet list adapts to smaller screens while retaining distance and availability information.
+The browser requests the toilet list and asks for the user's position. The frontend calculates straight-line distances from the search centre, keeps toilets within 2 km and displays the closest six. Selecting a marker or list item opens the same detail card. Google Maps handles walking directions outside the application.
 
-<p align="center">
-  <img
-    src="docs/images/toilapp-mobile-list.jpg"
-    alt="Toilapp toilet list displayed on a mobile screen"
-    width="380"
-  >
-</p>
+### Backend responsibilities
 
-## Technology stack
+The import client fetches the source records, the mapper converts source fields into the application's model, and the import service checks the mapped records before asking a transactional writer to save them. Keeping database writing in a separate Spring bean allows Spring to apply one transaction around the write operation.
 
-### Backend
+For user requests, the controller handles the HTTP endpoints, the service reads toilets through the repository, and a response DTO defines the JSON sent to the frontend. This keeps database entities separate from the public API representation.
 
-- Java 21
-- Spring Boot
-- Spring Data JPA
-- PostgreSQL
-- Maven
-- JUnit
-- Mockito
+### Why store the data in PostgreSQL?
 
-### Frontend
+Storing a local copy makes user requests independent of the municipality's response time and temporary outages. It also gives the application a consistent dataset with stable local IDs and lets the import handle source-specific validation in one place.
 
-- React
-- TypeScript
-- Vite
-- React Leaflet
-- Leaflet
-- Vitest
-- React Testing Library
+The tradeoff is freshness: changes at the source do not appear until another manual import succeeds. This is a small portfolio application, not a real-time availability service.
 
-### Map and navigation
+### Location and distance
 
-- OpenStreetMap tiles
-- Google Maps URLs for external walking directions
+When location is unavailable, the search uses Oslo city centre. If the user's actual position has no nearby results, the interface offers **Vis Oslo** to search there instead. The Oslo centre is a search location, never a substitute for the user's real position marker.
+
+Distances describe the current search centre and use the Haversine formula. They are straight-line estimates, not walking-route lengths. When searching Oslo from elsewhere, the displayed distance is from Oslo city centre; Google Maps determines the starting point for the actual walking route.
+
+### Shared selection
+
+`App.tsx` stores the selected toilet ID and derives its details from the current displayed results. The map and list therefore share one selection. Changing the search centre clears that selection.
 
 ## Project structure
 
 ```text
 restroom-finder/
 ├── backend/
-│   ├── src/
+│   ├── src/main/java/no/jens/toilapp/
+│   │   ├── importer/       # Source fetching, mapping and database import
+│   │   └── toilet/         # Entity, repository, service, controller and response
+│   ├── src/main/resources/db/migration/
+│   ├── src/test/
 │   ├── pom.xml
+│   ├── mvnw
 │   └── mvnw.cmd
 ├── frontend/
 │   ├── src/
@@ -114,193 +72,148 @@ restroom-finder/
 │   │   ├── test/
 │   │   ├── types/
 │   │   └── utils/
-│   ├── package.json
-│   └── vite.config.ts
-├── docs/
-│   └── images/
-├── docker-compose.yml
-├── .gitignore
-└── README.md
+│   └── package.json
+├── docs/data-source.md
+└── docker-compose.yml
 ```
 
-## How the application works
+## Run locally
 
-1. PostgreSQL stores the toilet dataset.
-2. Spring Boot reads toilet data through Spring Data JPA.
-3. The React frontend requests the data from the REST API.
-4. The browser is asked for the user's current position.
-5. The frontend calculates straight-line distance to each toilet.
-6. Toilets outside the 2 km radius are removed.
-7. User-selected filters are applied.
-8. Matching toilets remain ordered by distance.
-9. A maximum of six toilets is displayed.
-10. Selecting a map marker or list item opens a detail card.
-11. Google Maps can be opened with the toilet as the walking destination.
+You need Java 21, Node.js 24 with npm, Docker with Docker Compose, and Git. The Maven wrapper is included.
 
-## Design decisions
+### 1. Start PostgreSQL
 
-### Straight-line distance
-
-The current version uses the Haversine formula to calculate straight-line distance.
-
-This keeps the MVP independent of a paid or authenticated routing API. The calculated distance is useful for nearby filtering, but it is not the same as actual walking distance.
-
-### Shared selection state
-
-The selected toilet is stored in `App.tsx`.
-
-This allows both the map and the list to open the same detail card without maintaining separate and potentially conflicting selection states.
-
-### Filtering before the result limit
-
-Every toilet inside the search radius is filtered before the displayed result is limited to six.
-
-This prevents a matching toilet from being hidden simply because six closer toilets failed the selected filters.
-
-### Separate filtering utilities
-
-Geographical search and user-controlled filtering are implemented as separate utilities.
-
-This keeps distance rules, filter rules and React presentation logic independently testable.
-
-### External navigation
-
-Toilapp generates a Google Maps URL with walking mode rather than implementing turn-by-turn navigation.
-
-## Prerequisites
-
-- Java 21
-- Node.js and npm
-- Docker
-- Git
-
-## Run PostgreSQL
-
-Start the PostgreSQL service from the project root:
+From the repository root:
 
 ```powershell
 docker compose up -d postgres
 docker compose ps
 ```
 
-The database name is `toilapp`, and PostgreSQL is available on port `5432`. Its data is stored in a named Docker volume and survives normal container restarts.
+PostgreSQL is available locally on port `5432`, with database name `toilapp`. The backend's default connection settings match the local Compose service. Its named volume preserves data across normal container restarts.
 
-## Run the backend
+### 2. Import toilet data
 
-### Windows
+A new database is empty. Flyway creates the schema at backend startup; it does not populate the toilet table. Run an explicit import before using a fresh local installation.
+
+From `backend`, in Windows PowerShell:
+
+```powershell
+.\mvnw.cmd "-Dspring-boot.run.arguments=--toilapp.import.enabled=true --spring.main.web-application-type=none" spring-boot:run
+```
+
+From `backend`, on macOS or Linux:
+
+```bash
+sh mvnw -Dspring-boot.run.arguments="--toilapp.import.enabled=true --spring.main.web-application-type=none" spring-boot:run
+```
+
+This starts a non-web application for the import. It logs counts for created, updated, unchanged and rejected records. The import is idempotent: repeating it with the same source data does not create duplicate rows. Existing source records retain their local IDs when updated.
+
+Import is disabled during normal server startup. Refresh is manual, and records missing from a later source response are retained. See [the data-source documentation](docs/data-source.md) for field mapping, inspection commands and failure behavior.
+
+### 3. Start the backend
+
+In Windows PowerShell:
 
 ```powershell
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
 
-### macOS or Linux
+On macOS or Linux:
 
 ```bash
 cd backend
-./mvnw spring-boot:run
+sh mvnw spring-boot:run
 ```
 
-The backend runs on:
-
-```text
-http://localhost:8080
-```
-
-Available endpoints:
+Run these commands from the repository root, or omit `cd backend` if already there. The backend normally listens at `http://localhost:8080` and exposes:
 
 ```text
 GET /api/toilets
 GET /api/toilets/{id}
 ```
 
-## Run the frontend
+### 4. Start the frontend
 
-Open a separate terminal:
+In another terminal, from the repository root:
 
 ```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-Vite normally starts the frontend on:
+Open `http://localhost:5173`. The API URL defaults to `http://localhost:8080`. If Vite selects another port, use an origin allowed by the backend's CORS configuration; the defaults include ports 5173, 5174 and 4173.
 
-```text
-http://localhost:5173
-```
+## Tests and production build
 
-If the port is occupied, Vite selects another available port.
-
-## Run the tests
-
-### Frontend tests
+From `frontend`:
 
 ```powershell
-cd frontend
-npm run test
-```
-
-### Frontend production build
-
-```powershell
-cd frontend
+npm test
+npm run lint
 npm run build
 ```
 
-### Backend tests on Windows
+The build checks TypeScript and produces static files in `frontend/dist`. `npm run preview` can serve that build locally for inspection.
+
+From `backend`, in Windows PowerShell:
 
 ```powershell
-cd backend
 .\mvnw.cmd test
+.\mvnw.cmd package
 ```
 
-### Backend tests on macOS or Linux
+On macOS or Linux:
 
 ```bash
-cd backend
-./mvnw test
+sh mvnw test
+sh mvnw package
 ```
+
+The packaged backend can be started from `backend` with:
+
+```text
+java -jar target/toilapp-0.0.1-SNAPSHOT.jar
+```
+
+Frontend tests cover loading and errors, geolocation, distance and nearby search, selection, detail content and walking URLs. Map-related tests use mocks; they do not replace checking the real map in a browser.
+
+Backend tests cover API responses, service and repository behavior, source mapping and error handling, and repeated imports. Database tests use H2 with Flyway, rather than the deployed PostgreSQL instance. The test configuration disables import so tests do not call the live source.
+
+## Railway deployment
+
+The frontend and backend use separate service roots, `/frontend` and `/backend`. PostgreSQL runs as a third service and retains the imported dataset. The frontend serves the Vite production build, while the backend runs the packaged Spring Boot application.
+
+The application reads the following deployment variables:
+
+| Service | Variable | Purpose |
+| --- | --- | --- |
+| Backend | `PORT` | HTTP listening port, with 8080 as the local default |
+| Backend | `DB_URL` | PostgreSQL JDBC URL in the form `jdbc:postgresql://<host>:<port>/<database>` |
+| Backend | `DB_USERNAME`, `DB_PASSWORD` | Database credentials supplied through service variables |
+| Backend | `FRONTEND_ALLOWED_ORIGINS` | Allowed browser origins, including the live frontend HTTPS origin |
+| Frontend | `VITE_API_BASE_URL` | Public backend origin: `https://toilapp-backend-production.up.railway.app` |
+
+`VITE_API_BASE_URL` is embedded during the frontend build. It contains the backend origin without `/api/toilets`; the API client appends that path. Changing the value requires rebuilding the frontend.
+
+Flyway applies migrations and Hibernate validates the schema at backend startup. Normal deployments leave import disabled. A manual import must target the intended database and run separately from the long-running API process. Database credentials belong in service variables, not in documentation or frontend code.
 
 ## Current limitations
 
-- Toilet data is currently seeded in the backend.
-- The dataset currently focuses on Oslo.
-- Distances are straight-line estimates rather than walking-route distances.
-- Opening hours are not yet included.
-- Detailed accessibility information is not yet included.
-- Cleanliness ratings are seeded values rather than user-generated ratings.
-- The application does not yet include user accounts.
-- Navigation is handed off to Google Maps.
-- The application is not yet deployed publicly.
+- Coverage is limited to the imported Oslo dataset and may not reflect current conditions at a toilet.
+- Refresh is manual. There is no scheduled import or synchronization of source deletions.
+- Opening hours and live availability are not provided by the application.
+- Accessibility labels reflect the source assessment, which may be missing or outdated.
+- Distances are straight-line estimates; walking navigation is handed off to Google Maps.
+- The browser downloads the full dataset and performs nearby searching locally, which suits the current small dataset.
+- The application has no user accounts or user-submitted reports.
 
-## Planned improvements
+## Possible next steps
 
-- A larger municipal or external toilet dataset
-- Opening hours and availability status
-- Wheelchair accessibility information
-- Baby-changing facilities
-- User ratings and reports
-- Backend-driven geographical search
-- Azure deployment
-- GitHub Actions CI/CD
-- Improved mobile map controls
-
-## Testing approach
-
-The frontend test suite covers:
-
-- API loading and error states
-- browser geolocation states
-- distance calculations
-- nearby-toilet search
-- user-controlled filtering
-- map and list result coordination
-- toilet selection
-- detail-card content
-- Google Maps walking URLs
-
-The backend tests cover the existing API, service and repository behavior, including seed-data persistence and duplicate prevention.
+Useful improvements include clearer refresh information, broader PostgreSQL integration tests, automated build checks and better handling of temporary API failures. Scheduled refresh and a policy for removed source records could follow once their behavior is defined. A much larger dataset could justify moving geographical search to the backend.
 
 ## Author
 
