@@ -1,8 +1,5 @@
 import { useEffect } from 'react'
-import {
-  divIcon,
-  type LatLngTuple,
-} from 'leaflet'
+import { divIcon, type LatLngTuple } from 'leaflet'
 import {
   MapContainer,
   Marker,
@@ -13,42 +10,27 @@ import {
 import type { Coordinates } from '../types/Coordinates'
 import type { ToiletDisplayItem } from '../types/ToiletDisplayItem'
 import { formatDistance } from '../utils/distance'
+import { formatAccessibility, formatToiletName } from '../utils/toiletDisplay'
 
 type ToiletMapProps = {
-  /** Toilets whose coordinates determine the marker positions. */
   toilets: ToiletDisplayItem[]
-
-  /** User position when the browser has provided it. */
   userLocation: Coordinates | null
-
-  /** Called when the user selects a toilet marker. */
-  onSelectToilet: (
-    toilet: ToiletDisplayItem,
-  ) => void
+  onSelectToilet: (toilet: ToiletDisplayItem) => void
 }
 
 type MapCenterControllerProps = {
   userLocation: Coordinates | null
 }
 
-const OSLO_CENTER: LatLngTuple = [
-  59.9139,
-  10.7522,
-]
-
+const OSLO_CENTER: LatLngTuple = [59.9139, 10.7522]
 const DEFAULT_MAP_ZOOM = 13
 
-/*
- * This icon lives outside the component so Leaflet does not receive
- * a new icon object every time React renders the map. A DivIcon also
- * avoids the image-path configuration required by Leaflet's default
- * marker.
- */
+// Reuse DivIcons across renders and avoid Leaflet's default image-path setup.
 const toiletIcon = divIcon({
   className: 'toilet-marker',
   html: `
     <span class="toilet-marker__symbol" aria-hidden="true">
-      🚽
+      WC
     </span>
   `,
   iconSize: [42, 42],
@@ -60,7 +42,7 @@ const userLocationIcon = divIcon({
   className: 'user-location-marker',
   html: `
     <span class="user-location-marker__symbol" aria-hidden="true">
-      ●
+      &#9679;
     </span>
   `,
   iconSize: [28, 28],
@@ -68,46 +50,27 @@ const userLocationIcon = divIcon({
   popupAnchor: [0, -14],
 })
 
-function toLatLngTuple(
-  coordinates: Coordinates,
-): LatLngTuple {
-  return [
-    coordinates.latitude,
-    coordinates.longitude,
-  ]
+function toLatLngTuple(coordinates: Coordinates): LatLngTuple {
+  return [coordinates.latitude, coordinates.longitude]
 }
 
 /**
- * Moves the already-created Leaflet map when the user's location
- * arrives.
- *
- * The slightly zoomed-out view gives mobile users a better overview
- * of the surrounding area.
+ * Recenters the existing Leaflet map when the browser provides a location.
  */
-function MapCenterController({
-  userLocation,
-}: MapCenterControllerProps) {
+function MapCenterController({ userLocation }: MapCenterControllerProps) {
   const map = useMap()
 
   useEffect(() => {
-    if (!userLocation) {
-      return
+    if (userLocation) {
+      map.setView(toLatLngTuple(userLocation), DEFAULT_MAP_ZOOM)
     }
-
-    map.setView(
-      toLatLngTuple(userLocation),
-      DEFAULT_MAP_ZOOM,
-    )
   }, [map, userLocation])
 
   return null
 }
 
 /**
- * Displays nearby toilets and, when available, the user's position.
- *
- * The component reports marker selection to App but does not own the
- * selected-toilet state.
+ * Displays toilet markers and delegates marker selection to App.
  */
 export function ToiletMap({
   toilets,
@@ -125,9 +88,7 @@ export function ToiletMap({
       scrollWheelZoom
       className="toilet-map"
     >
-      <MapCenterController
-        userLocation={userLocation}
-      />
+      <MapCenterController userLocation={userLocation} />
 
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -138,10 +99,10 @@ export function ToiletMap({
         <Marker
           position={toLatLngTuple(userLocation)}
           icon={userLocationIcon}
-          title="Your location"
+          title="Din posisjon"
         >
           <Popup>
-            <p>You are here</p>
+            <p>Du er her</p>
           </Popup>
         </Marker>
       )}
@@ -149,34 +110,23 @@ export function ToiletMap({
       {toilets.map((toilet) => (
         <Marker
           key={toilet.id}
-          position={[
-            toilet.latitude,
-            toilet.longitude,
-          ]}
+          position={[toilet.latitude, toilet.longitude]}
           icon={toiletIcon}
-          title={toilet.name}
-          eventHandlers={{
-            click: () =>
-              onSelectToilet(toilet),
-          }}
+          title={formatToiletName(toilet.name)}
+          eventHandlers={{ click: () => onSelectToilet(toilet) }}
         >
           <Popup>
             <article className="toilet-popup">
-              <h2>{toilet.name}</h2>
+              <h2>{formatToiletName(toilet.name)}</h2>
 
               {toilet.distanceMeters !== undefined && (
                 <p className="toilet-popup__distance">
-                  {formatDistance(
-                    toilet.distanceMeters,
-                  )}{' '}
-                  away
+                  {formatDistance(toilet.distanceMeters)} unna
                 </p>
               )}
 
-              <p>{toilet.address}</p>
-
               <p className="toilet-popup__status">
-                {toilet.free ? 'Free' : 'Paid'}
+                {formatAccessibility(toilet.accessibilityStatus)}
               </p>
             </article>
           </Popup>

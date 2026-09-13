@@ -21,6 +21,15 @@ describe('fetchToilets', () => {
     )
   })
 
+  it('preserves nullable API fields', async () => {
+    const responseToilets = [{ ...toilets[1], name: null }]
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(responseToilets), { status: 200 }),
+    )
+
+    await expect(fetchToilets()).resolves.toEqual(responseToilets)
+  })
+
   it('throws an error containing the unsuccessful HTTP status', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(null, { status: 503 }),

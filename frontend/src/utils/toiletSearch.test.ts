@@ -18,14 +18,14 @@ function createTestToilet(
 ): Toilet {
   return {
     id,
+    source: 'OSLO',
+    toiletType: null,
+    accessibilityStatus: null,
+    comments: null,
+    sourceModifiedAt: null,
     name: `Test toilet ${id}`,
-    address: `Test address ${id}`,
     latitude: USER_LOCATION.latitude + latitudeOffset,
     longitude: USER_LOCATION.longitude,
-    free: true,
-    publicToilet: true,
-    requiresEntry: false,
-    cleanlinessRating: 4,
   }
 }
 

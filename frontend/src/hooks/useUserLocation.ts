@@ -20,9 +20,6 @@ const GEOLOCATION_OPTIONS: PositionOptions = {
   maximumAge: 30_000,
 }
 
-/**
- * Converts browser geolocation errors into predictable app state.
- */
 function getLocationErrorDetails(
   error: GeolocationPositionError,
 ): Pick<UserLocationResult, 'status' | 'errorMessage'> {
@@ -31,40 +28,33 @@ function getLocationErrorDetails(
       return {
         status: 'denied',
         errorMessage:
-          'Location access was denied. Showing Oslo toilets instead.',
+          'Du har ikke gitt tilgang til posisjonen din. Viser toaletter i Oslo i stedet.',
       }
 
     case error.POSITION_UNAVAILABLE:
       return {
         status: 'error',
         errorMessage:
-          'Your current location could not be determined.',
+          'Kunne ikke finne posisjonen din.',
       }
 
     case error.TIMEOUT:
       return {
         status: 'error',
         errorMessage:
-          'Finding your location took too long.',
+          'Det tok for lang tid å finne posisjonen din.',
       }
 
     default:
       return {
         status: 'error',
         errorMessage:
-          'An unexpected location error occurred.',
+          'Det oppstod en uventet feil da vi prøvde å finne posisjonen din.',
       }
   }
 }
 
-/**
- * Retrieves the user's current position through the browser.
- *
- * The browser controls the permission prompt. The hook exposes a
- * predictable result object so UI components do not need to interact
- * with the Geolocation API directly.
- */
-
+// Null coordinates let the map fall back to Oslo so toilets remain discoverable.
 export function useUserLocation(): UserLocationResult {
   const [locationResult, setLocationResult] =
     useState<UserLocationResult>(() => {
@@ -77,7 +67,7 @@ export function useUserLocation(): UserLocationResult {
         status: supportsGeolocation ? 'loading' : 'unsupported',
         errorMessage: supportsGeolocation
           ? null
-          : 'This browser does not support location services.',
+          : 'Nettleseren din støtter ikke posisjonstjenester.',
       }
     })
 
@@ -91,7 +81,6 @@ export function useUserLocation(): UserLocationResult {
       return
     }
 
-    // Resten av den eksisterende effekten fortsetter her.
     navigator.geolocation.getCurrentPosition(
       (position) => {
         if (!isSubscribed) {
