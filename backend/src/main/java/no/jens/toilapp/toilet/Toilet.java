@@ -3,6 +3,7 @@ package no.jens.toilapp.toilet;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * An imported public toilet.
@@ -87,24 +88,32 @@ public class Toilet {
     }
 
     /**
-     * Updates source-controlled fields without changing either identity.
+     * Copies changed source-controlled fields while preserving both identifiers.
+     *
+     * @return true when at least one field was changed
      */
-    public void updateSourceDetails(
-            String name,
-            double latitude,
-            double longitude,
-            String toiletType,
-            String accessibilityStatus,
-            String comments,
-            Instant sourceModifiedAt
-    ) {
-        this.name = name;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.toiletType = toiletType;
-        this.accessibilityStatus = accessibilityStatus;
-        this.comments = comments;
-        this.sourceModifiedAt = sourceModifiedAt;
+
+    public boolean synchronizeSourceDetails(Toilet sourceToilet) {
+        boolean unchanged = Objects.equals(name, sourceToilet.name)
+                && Double.compare(latitude, sourceToilet.latitude) == 0
+                && Double.compare(longitude, sourceToilet.longitude) == 0
+                && Objects.equals(toiletType, sourceToilet.toiletType)
+                && Objects.equals(accessibilityStatus, sourceToilet.accessibilityStatus)
+                && Objects.equals(comments, sourceToilet.comments)
+                && Objects.equals(sourceModifiedAt, sourceToilet.sourceModifiedAt);
+
+        if (unchanged) {
+            return false;
+        }
+
+        name = sourceToilet.name;
+        latitude = sourceToilet.latitude;
+        longitude = sourceToilet.longitude;
+        toiletType = sourceToilet.toiletType;
+        accessibilityStatus = sourceToilet.accessibilityStatus;
+        comments = sourceToilet.comments;
+        sourceModifiedAt = sourceToilet.sourceModifiedAt;
+        return true;
     }
 
     public Long getId() {

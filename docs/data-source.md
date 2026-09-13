@@ -54,3 +54,12 @@ GeoJSON lagrer koordinater slik:
 
 ```text
 [longitude, latitude]
+
+## Import
+
+Importen kjøres eksplisitt og er deaktivert under vanlig serveroppstart. Den henter først hele datasettet, kontrollerer pagineringen og mapper alle gyldige poster før databaseskrivingen begynner.
+
+Verifisert kommando for Windows PowerShell, kjørt fra `backend`:
+
+```powershell
+.\mvnw.cmd "-Dspring-boot.run.arguments=--toilapp.import.enabled=true --spring.main.web-application-type=none" spring-boot:run
