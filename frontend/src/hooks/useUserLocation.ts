@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Coordinates } from '../types/Coordinates'
 
-export type UserLocationStatus =
-  | 'loading'
-  | 'success'
-  | 'denied'
-  | 'unsupported'
-  | 'error'
+export type UserLocationStatus = 'loading' | 'success' | 'denied' | 'unsupported' | 'error'
 
 export type UserLocationResult = {
   coordinates: Coordinates | null
@@ -20,9 +15,6 @@ const GEOLOCATION_OPTIONS: PositionOptions = {
   maximumAge: 30_000,
 }
 
-/**
- * Converts browser geolocation errors into predictable app state.
- */
 function getLocationErrorDetails(
   error: GeolocationPositionError,
 ): Pick<UserLocationResult, 'status' | 'errorMessage'> {
@@ -31,62 +23,49 @@ function getLocationErrorDetails(
       return {
         status: 'denied',
         errorMessage:
-          'Location access was denied. Showing Oslo toilets instead.',
+          'Du har ikke gitt tilgang til posisjonen din. Viser toaletter i Oslo i stedet.',
       }
 
     case error.POSITION_UNAVAILABLE:
       return {
         status: 'error',
-        errorMessage:
-          'Your current location could not be determined.',
+        errorMessage: 'Kunne ikke finne posisjonen din.',
       }
 
     case error.TIMEOUT:
       return {
         status: 'error',
-        errorMessage:
-          'Finding your location took too long.',
+        errorMessage: 'Det tok for lang tid å finne posisjonen din.',
       }
 
     default:
       return {
         status: 'error',
         errorMessage:
-          'An unexpected location error occurred.',
+          'Det oppstod en uventet feil da vi prøvde å finne posisjonen din.',
       }
   }
 }
 
-/**
- * Retrieves the user's current position through the browser.
- *
- * The browser controls the permission prompt. The hook exposes a
- * predictable result object so UI components do not need to interact
- * with the Geolocation API directly.
- */
-
+// Report the real position only; App owns the Oslo search fallback.
 export function useUserLocation(): UserLocationResult {
-  const [locationResult, setLocationResult] =
-    useState<UserLocationResult>({
+  const [locationResult, setLocationResult] = useState<UserLocationResult>(() => {
+    const supportsGeolocation = typeof navigator !== 'undefined' && !!navigator.geolocation
+
+    return {
       coordinates: null,
-      status: 'loading',
-      errorMessage: null,
-    })
+      status: supportsGeolocation ? 'loading' : 'unsupported',
+      errorMessage: supportsGeolocation
+        ? null
+        : 'Nettleseren din støtter ikke posisjonstjenester.',
+    }
+  })
 
   useEffect(() => {
     let isSubscribed = true
 
-    if (!navigator.geolocation) {
-      setLocationResult({
-        coordinates: null,
-        status: 'unsupported',
-        errorMessage:
-          'This browser does not support location services.',
-      })
-
-      return () => {
-        isSubscribed = false
-      }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -119,11 +98,7 @@ export function useUserLocation(): UserLocationResult {
       GEOLOCATION_OPTIONS,
     )
 
-    /*
-     * getCurrentPosition does not provide an AbortController-like
-     * cancellation method. The flag prevents a late browser callback
-     * from updating state after the component has unmounted.
-     */
+    // Geolocation requests cannot be cancelled. Ignore callbacks that arrive after unmount.
     return () => {
       isSubscribed = false
     }

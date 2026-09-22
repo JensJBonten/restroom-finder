@@ -90,7 +90,9 @@ describe('useUserLocation', () => {
     })
 
     expect(result.current.coordinates).toBeNull()
-    expect(result.current.errorMessage).toContain('denied')
+    expect(result.current.errorMessage).toBe(
+      'Du har ikke gitt tilgang til posisjonen din. Viser toaletter i Oslo i stedet.',
+    )
   })
 
   it('returns unsupported when geolocation is unavailable', async () => {
@@ -106,6 +108,35 @@ describe('useUserLocation', () => {
     })
 
     expect(result.current.coordinates).toBeNull()
+    expect(result.current.errorMessage).toBe(
+      'Nettleseren din støtter ikke posisjonstjenester.',
+    )
+  })
+
+  it.each([
+    [2, 'Kunne ikke finne posisjonen din.'],
+    [3, 'Det tok for lang tid å finne posisjonen din.'],
+    [99, 'Det oppstod en uventet feil da vi prøvde å finne posisjonen din.'],
+  ])('returns a Norwegian message for error code %s', async (code, message) => {
+    mockGeolocation(
+      vi.fn(
+        (
+          _successCallback: PositionCallback,
+          errorCallback: PositionErrorCallback,
+        ) => {
+          errorCallback(createGeolocationError(code, 'Browser error'))
+        },
+      ),
+    )
+
+    const { result } = renderHook(() => useUserLocation())
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error')
+    })
+
+    expect(result.current.coordinates).toBeNull()
+    expect(result.current.errorMessage).toBe(message)
   })
 
   it('does not update state after unmounting', () => {

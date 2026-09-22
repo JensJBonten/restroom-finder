@@ -1,11 +1,11 @@
 export type Toilet = {
   id: number
-  name: string
-  address: string
+  source: string
+  name: string | null
   latitude: number
   longitude: number
-  free: boolean
-  publicToilet: boolean
-  requiresEntry: boolean
-  cleanlinessRating: number
+  toiletType: string | null
+  accessibilityStatus: 'ACCESSIBLE' | 'DIFFICULT_ACCESS' | 'NOT_ACCESSIBLE' | 'NOT_ASSESSED' | null
+  comments: string | null
+  sourceModifiedAt: string | null
 }

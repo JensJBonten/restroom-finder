@@ -1,105 +1,67 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchToilets } from './api/toiletsApi'
 import { ToiletDetailCard } from './components/ToiletDetailCard'
-import { ToiletFilterPanel } from './components/ToiletFilterPanel'
 import { ToiletList } from './components/ToiletList'
 import { ToiletMap } from './components/ToiletMap'
 import { useUserLocation } from './hooks/useUserLocation'
+import type { Coordinates } from './types/Coordinates'
 import type { Toilet } from './types/Toilet'
 import type { ToiletDisplayItem } from './types/ToiletDisplayItem'
-import {
-  DEFAULT_TOILET_FILTERS,
-  type ToiletFilters,
-} from './types/ToiletFilters'
-import {
-  countActiveToiletFilters,
-  filterToilets,
-  hasActiveToiletFilters,
-} from './utils/toiletFilters'
-import {
-  DEFAULT_MAXIMUM_RESULTS,
-  findNearbyToilets,
-} from './utils/toiletSearch'
+import { DEFAULT_MAXIMUM_RESULTS, findNearbyToilets } from './utils/toiletSearch'
 import './App.css'
 
-type OpenPanel =
-  | 'filters'
-  | 'list'
-  | null
+type OpenPanel = 'list' | null
+
+const OSLO_CENTER: Coordinates = { latitude: 59.9139, longitude: 10.7522 }
 
 function App() {
-  const [toilets, setToilets] =
-    useState<Toilet[]>([])
+  const [toilets, setToilets] = useState<Toilet[]>([])
+  const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isShowingOslo, setIsShowingOslo] = useState(false)
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
 
-  const [loading, setLoading] =
-    useState(true)
-
-  const [errorMessage, setErrorMessage] =
-    useState<string | null>(null)
-
-  const [openPanel, setOpenPanel] =
-    useState<OpenPanel>(null)
-
-  const [selectedToilet, setSelectedToilet] =
-    useState<ToiletDisplayItem | null>(
-      null,
-    )
-
-  const [filters, setFilters] =
-    useState<ToiletFilters>(
-      DEFAULT_TOILET_FILTERS,
-    )
+  // Store only the identity so selection is derived from current search results.
+  const [selectedToiletId, setSelectedToiletId] = useState<Toilet['id'] | null>(null)
 
   const {
     coordinates: userLocation,
     status: userLocationStatus,
-    errorMessage:
-      userLocationErrorMessage,
+    errorMessage: userLocationErrorMessage,
   } = useUserLocation()
 
+  // App searches Oslo when no real position is available, without adding a false user marker.
+  const searchCenter = isShowingOslo ? OSLO_CENTER : (userLocation ?? OSLO_CENTER)
+
+  const mapCenter = searchCenter
+  const searchArea = `${searchCenter.latitude},${searchCenter.longitude}`
+  const [previousSearchArea, setPreviousSearchArea] = useState(searchArea)
+
+  // A new search area should not reopen a toilet selected in the previous area.
+  if (previousSearchArea !== searchArea) {
+    setPreviousSearchArea(searchArea)
+    setSelectedToiletId(null)
+  }
+
   useEffect(() => {
-    const controller =
-      new AbortController()
+    const controller = new AbortController()
 
     async function loadToilets() {
       try {
-        const toiletData =
-          await fetchToilets(
-            controller.signal,
-          )
-
+        const toiletData = await fetchToilets(controller.signal)
         setToilets(toiletData)
       } catch (error) {
-        /*
-         * AbortError is expected when React cleans up the effect.
-         * It should not be presented as an application failure.
-         */
-        if (
-          error instanceof DOMException &&
-          error.name === 'AbortError'
-        ) {
+        // Cancellation is expected when the component is removed.
+        if (error instanceof DOMException && error.name === 'AbortError') {
           return
         }
 
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Unknown error'
+        const message = error instanceof Error ? error.message : 'Ukjent feil'
 
         setErrorMessage(message)
       } finally {
-        /*
-         * StrictMode may cancel the first development request while
-         * starting another. A cancelled request must not finish the
-         * loading state for the active request.
-         */
-        if (
-          !controller.signal.aborted
-        ) {
+        // A cancelled request must not complete another request's loading state.
+        if (!controller.signal.aborted) {
           setLoading(false)
         }
       }
@@ -107,163 +69,60 @@ function App() {
 
     loadToilets()
 
-    return () => {
-      controller.abort()
-    }
+    return () => controller.abort()
   }, [])
 
-  /*
-   * Request every toilet inside the radius before applying user
-   * filters. Limiting to six first could hide a matching seventh
-   * toilet.
-   */
-  const nearbyToilets:
-    ToiletDisplayItem[] =
-    useMemo(() => {
-      if (!userLocation) {
-        return toilets
-      }
+  // Keep the full nearby count for the status message, then display only the closest six.
+  const nearbyToilets: ToiletDisplayItem[] = useMemo(
+    () => findNearbyToilets(toilets, searchCenter, { maximumResults: toilets.length }),
+    [toilets, searchCenter],
+  )
 
-      return findNearbyToilets(
-        toilets,
-        userLocation,
-        {
-          maximumResults:
-            toilets.length,
-        },
-      )
-    }, [toilets, userLocation])
+  const displayedToilets = useMemo(
+    () => nearbyToilets.slice(0, DEFAULT_MAXIMUM_RESULTS),
+    [nearbyToilets],
+  )
 
-  const filteredToilets =
-    useMemo(
-      () =>
-        filterToilets(
-          nearbyToilets,
-          filters,
-        ),
-      [nearbyToilets, filters],
-    )
-
-  const displayedToilets =
-    useMemo(
-      () =>
-        filteredToilets.slice(
-          0,
-          DEFAULT_MAXIMUM_RESULTS,
-        ),
-      [filteredToilets],
-    )
-
-  const activeFilterCount =
-    countActiveToiletFilters(filters)
-
-  const filtersAreActive =
-    hasActiveToiletFilters(filters)
+  // Derive details from current results so the map and list share the same selection.
+  const selectedToilet =
+    displayedToilets.find((toilet) => toilet.id === selectedToiletId) ?? null
 
   const showNoNearbyToiletsMessage =
-    userLocation !== null &&
-    nearbyToilets.length === 0
+    !isShowingOslo && userLocation !== null && nearbyToilets.length === 0
 
-  const showNoFilterMatchesMessage =
-    filtersAreActive &&
-    nearbyToilets.length > 0 &&
-    filteredToilets.length === 0
-
-  const locationStatusMessage =
-    (() => {
-      if (
-        userLocationErrorMessage
-      ) {
-        return userLocationErrorMessage
-      }
-
-      if (
-        userLocationStatus ===
-        'loading'
-      ) {
-        return 'Finding your location...'
-      }
-
-      if (
-        showNoNearbyToiletsMessage
-      ) {
-        return 'No toilets found within 2 km.'
-      }
-
-      if (
-        showNoFilterMatchesMessage
-      ) {
-        return 'No toilets match the selected filters.'
-      }
-
-      if (
-        userLocationStatus ===
-        'success'
-      ) {
-        return `Showing ${displayedToilets.length} of ${nearbyToilets.length} nearby toilets.`
-      }
-
-      return null
-    })()
-
-  const listEmptyMessage =
-    filtersAreActive
-      ? 'No toilets match the selected filters.'
-      : userLocation
-        ? 'No toilets found within 2 km.'
-        : 'No toilets found.'
-
-  /*
-   * If active filters remove the selected toilet, the detail card
-   * must close. Otherwise App could show details for a toilet that
-   * is no longer present on the map or in the list.
-   */
-  useEffect(() => {
-    if (!selectedToilet) {
-      return
+  const locationStatusMessage = (() => {
+    if (isShowingOslo) {
+      return `Viser ${displayedToilets.length} av ${nearbyToilets.length} toaletter nær Oslo sentrum.`
     }
 
-    const selectedToiletIsVisible =
-      displayedToilets.some(
-        (toilet) =>
-          toilet.id ===
-          selectedToilet.id,
-      )
-
-    if (
-      !selectedToiletIsVisible
-    ) {
-      setSelectedToilet(null)
+    if (userLocationErrorMessage) {
+      return userLocationErrorMessage
     }
-  }, [
-    displayedToilets,
-    selectedToilet,
-  ])
 
-  /**
-   * Stores a toilet selected from either the map or the list.
-   */
-  function handleSelectToilet(
-    toilet: ToiletDisplayItem,
-  ) {
-    setSelectedToilet(toilet)
+    if (userLocationStatus === 'loading') {
+      return 'Finner posisjonen din...'
+    }
+
+    if (showNoNearbyToiletsMessage) {
+      return 'Ingen toaletter funnet i nærheten. Datakilden dekker foreløpig Oslo.'
+    }
+
+    if (userLocationStatus === 'success') {
+      return `Viser ${displayedToilets.length} av ${nearbyToilets.length} toaletter i nærheten.`
+    }
+
+    return null
+  })()
+
+  const listEmptyMessage = 'Ingen toaletter funnet innenfor 2 km.'
+
+  function handleSelectToilet(toilet: ToiletDisplayItem) {
+    setSelectedToiletId(toilet.id)
     setOpenPanel(null)
   }
 
   function handleCloseToiletDetails() {
-    setSelectedToilet(null)
-  }
-
-  function handleFiltersChange(
-    nextFilters: ToiletFilters,
-  ) {
-    setFilters(nextFilters)
-  }
-
-  function handleResetFilters() {
-    setFilters(
-      DEFAULT_TOILET_FILTERS,
-    )
+    setSelectedToiletId(null)
   }
 
   return (
@@ -271,181 +130,94 @@ function App() {
       <header className="app-header">
         <div>
           <h1>Toilapp</h1>
-
-          <p>
-            Find nearby toilets in Oslo.
-          </p>
+          <p>Finn offentlige toaletter i nærheten.</p>
         </div>
       </header>
 
       {loading && (
-        <section
-          className="status-panel"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <p>Loading toilets...</p>
+        <section className="status-panel" aria-live="polite" aria-busy="true">
+          <p>Laster toaletter...</p>
         </section>
       )}
 
       {errorMessage && (
         <section className="status-panel status-panel--error">
-          <p role="alert">
-            Could not load toilets:{' '}
-            {errorMessage}
-          </p>
+          <p role="alert">Kunne ikke laste toaletter: {errorMessage}</p>
         </section>
       )}
 
-      {!loading &&
-        !errorMessage && (
-          <section
-            className="map-wrapper"
-            aria-label="Map showing nearby toilets"
-          >
-            <ToiletMap
-              toilets={
-                displayedToilets
-              }
-              userLocation={
-                userLocation
-              }
-              onSelectToilet={
-                handleSelectToilet
-              }
-            />
+      {!loading && !errorMessage && (
+        <section className="map-wrapper" aria-label="Kart over toaletter i nærheten">
+          <ToiletMap
+            toilets={displayedToilets}
+            mapCenter={mapCenter}
+            userLocation={userLocation}
+            onSelectToilet={handleSelectToilet}
+          />
 
-            {locationStatusMessage && (
-              <div
-                className="location-status-card"
-                role="status"
-                aria-live="polite"
-              >
-                <p>
-                  {
-                    locationStatusMessage
-                  }
-                </p>
-              </div>
-            )}
+          {locationStatusMessage && (
+            <div className="location-status-card" role="status" aria-live="polite">
+              <p>{locationStatusMessage}</p>
 
-            {selectedToilet &&
-              openPanel === null && (
-                <ToiletDetailCard
-                  toilet={
-                    selectedToilet
-                  }
-                  onClose={
-                    handleCloseToiletDetails
-                  }
-                />
+              {showNoNearbyToiletsMessage && (
+                <button
+                  className="map-action-button oslo-fallback-button"
+                  type="button"
+                  onClick={() => {
+                    setIsShowingOslo(true)
+                    setSelectedToiletId(null)
+                  }}
+                >
+                  Vis Oslo
+                </button>
               )}
+            </div>
+          )}
 
-            {openPanel === null && (
-              <div className="map-action-buttons">
-                <button
-                  className="map-action-button"
-                  type="button"
-                  aria-expanded={
-                    false
-                  }
-                  aria-controls="toilet-filter-panel"
-                  onClick={() =>
-                    setOpenPanel(
-                      'filters',
-                    )
-                  }
-                >
-                  Filters
-                  {activeFilterCount >
-                  0
-                    ? ` (${activeFilterCount})`
-                    : ''}
-                </button>
+          {selectedToilet && openPanel === null && (
+            <ToiletDetailCard toilet={selectedToilet} onClose={handleCloseToiletDetails} />
+          )}
 
-                <button
-                  className="map-action-button map-action-button--primary"
-                  type="button"
-                  aria-expanded={
-                    false
-                  }
-                  aria-controls="toilet-list-panel"
-                  onClick={() =>
-                    setOpenPanel(
-                      'list',
-                    )
-                  }
-                >
-                  Show list (
-                  {
-                    displayedToilets.length
-                  }
-                  )
-                </button>
-              </div>
-            )}
-
-            {openPanel ===
-              'filters' && (
-              <aside
-                id="toilet-filter-panel"
-                className="filter-panel"
-                aria-label="Filter nearby toilets"
+          {openPanel === null && (
+            <div className="map-action-buttons">
+              <button
+                className="map-action-button map-action-button--primary"
+                type="button"
+                aria-expanded={false}
+                aria-controls="toilet-list-panel"
+                onClick={() => setOpenPanel('list')}
               >
-                <ToiletFilterPanel
-                  filters={filters}
-                  onFiltersChange={
-                    handleFiltersChange
-                  }
-                  onResetFilters={
-                    handleResetFilters
-                  }
-                  onClose={() =>
-                    setOpenPanel(null)
-                  }
-                />
-              </aside>
-            )}
+                Vis liste ({displayedToilets.length})
+              </button>
+            </div>
+          )}
 
-            {openPanel ===
-              'list' && (
-              <aside
-                id="toilet-list-panel"
-                className="toilet-list-panel"
-                aria-label="List of available toilets"
+          {openPanel === 'list' && (
+            <aside
+              id="toilet-list-panel"
+              className="toilet-list-panel"
+              aria-label="Liste over tilgjengelige toaletter"
+            >
+              <button
+                className="close-list-button"
+                type="button"
+                aria-expanded={true}
+                aria-controls="toilet-list-panel"
+                onClick={() => setOpenPanel(null)}
               >
-                <button
-                  className="close-list-button"
-                  type="button"
-                  aria-expanded={
-                    true
-                  }
-                  aria-controls="toilet-list-panel"
-                  onClick={() =>
-                    setOpenPanel(null)
-                  }
-                >
-                  Close list
-                </button>
+                Lukk liste
+              </button>
 
-                <ToiletList
-                  toilets={
-                    displayedToilets
-                  }
-                  selectedToiletId={
-                    selectedToilet?.id
-                  }
-                  emptyMessage={
-                    listEmptyMessage
-                  }
-                  onSelectToilet={
-                    handleSelectToilet
-                  }
-                />
-              </aside>
-            )}
-          </section>
-        )}
+              <ToiletList
+                toilets={displayedToilets}
+                selectedToiletId={selectedToilet?.id}
+                emptyMessage={listEmptyMessage}
+                onSelectToilet={handleSelectToilet}
+              />
+            </aside>
+          )}
+        </section>
+      )}
     </main>
   )
 }

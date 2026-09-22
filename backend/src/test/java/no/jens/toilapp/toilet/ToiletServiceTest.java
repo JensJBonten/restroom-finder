@@ -6,6 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,15 +25,15 @@ class ToiletServiceTest {
     private ToiletService toiletService;
 
     private final Toilet youngstorgetToilet = new Toilet(
-            1L,
-            "Youngstorget public toilet",
-            "Youngstorget, Oslo",
+            "OSLO_KOMMUNE",
+            "test-global-id",
+            "Youngstorget",
             59.9140,
             10.7522,
-            true,
-            true,
-            false,
-            4.1
+            "PUBLIC_TOILET",
+            null,
+            "Test record",
+            Instant.parse("2026-09-12T06:00:00Z")
     );
 
     @Test
@@ -43,7 +44,7 @@ class ToiletServiceTest {
         List<Toilet> toilets = toiletService.getAllToilets();
 
         assertEquals(1, toilets.size());
-        assertEquals("Youngstorget public toilet", toilets.getFirst().getName());
+        assertEquals("Youngstorget", toilets.getFirst().getName());
 
         verify(toiletRepository).findAllByOrderByIdAsc();
     }
@@ -56,13 +57,13 @@ class ToiletServiceTest {
         Optional<Toilet> toilet = toiletService.getToiletById(1L);
 
         assertTrue(toilet.isPresent());
-        assertEquals("Youngstorget public toilet", toilet.get().getName());
+        assertEquals("Youngstorget", toilet.get().getName());
 
         verify(toiletRepository).findById(1L);
     }
 
     @Test
-    void returnsEmptyOptionalWhenIdDoesNotExist() {
+    void returnsEmptyWhenIdDoesNotExist() {
         when(toiletRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
